@@ -16,6 +16,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 		// In-progress function call, assembled across three stream phases:
 		// output_item.added (name + call id) -> arguments.delta (chunks) ->
 		// arguments.done (final arguments, emit).
+		// TODO: What happens if LLM calls multiple tools in this turn? If It builds in order - no problem, but if it interleaves building events - we need to track by call ID
 		var fcName, fcCallID, fcArgs string
 
 		for stream.Next() {

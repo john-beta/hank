@@ -17,6 +17,7 @@ type Agent struct {
 }
 
 // New wires an agent with its LLM client and store.
+// TODO: Refactor State: should be scoped by a sessionID using Store, not a single instance per Agent. The agent MUST be stateless, reusable across sessions.
 func New(llmClient llm.Client, st store.Store) *Agent {
 	return &Agent{
 		llm:   llmClient,
@@ -30,6 +31,7 @@ func New(llmClient llm.Client, st store.Store) *Agent {
 // channel is closed when the turn completes or ctx is cancelled.
 func (a *Agent) Handle(ctx context.Context, userText string) <-chan Event {
 	out := make(chan Event)
+
 	go a.runLoop(ctx, userText, out)
 	return out
 }
