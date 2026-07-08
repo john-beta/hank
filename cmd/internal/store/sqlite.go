@@ -83,12 +83,15 @@ func (s *SQLiteStore) SaveTurn(ctx context.Context, t Turn) error {
 }
 
 // LastAgentTurn returns the most recent agent turn for a session, or nil, nil
-// if the session has no agent turn yet.
+// if the session has no agent turn yet. created_at has only one-second
+// resolution, and a single loop can persist several agent turns within the
+// same second (intermediate tool-call turns plus the final text turn), so
+// rowid (monotonic per INSERT) breaks the tie in favor of the last-saved turn.
 func (s *SQLiteStore) LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error) {
 	const q = `SELECT turn_id, session_id, response_id, phase, role, content, created_at
 	           FROM turn
 	           WHERE session_id = ? AND role = 'agent'
-	           ORDER BY created_at DESC
+	           ORDER BY created_at DESC, rowid DESC
 	           LIMIT 1`
 	var t Turn
 	err := s.db.QueryRowContext(ctx, q, sessionID).Scan(
