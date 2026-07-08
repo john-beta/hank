@@ -13,11 +13,12 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 	go func() {
 		defer close(events)
 
-		// In-progress function call, assembled across three stream phases:
-		// output_item.added (name + call id) -> arguments.delta (chunks) ->
-		// arguments.done (final arguments, emit).
-		// TODO: What happens if LLM calls multiple tools in this turn? If It builds in order - no problem, but if it interleaves building events - we need to track by call ID
-		var fcName, fcCallID, fcArgs string
+		// In-progress function calls, keyed by output item id and assembled
+		// across three stream phases: output_item.added (name + call id) ->
+		// arguments.delta (argument chunks) -> arguments.done (final arguments,
+		// emit). Keying by item id keeps parallel tool calls separate even if
+		// the API interleaves their events.
+		pending := make(map[string]*FunctionCallData)
 
 		for stream.Next() {
 			// Bail out promptly if the consumer disconnected.
@@ -36,25 +37,24 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 			case "response.output_item.added":
 				item := event.AsResponseOutputItemAdded().Item
 				if item.Type == "function_call" {
-					fcName = item.Name
-					fcCallID = item.CallID
-					fcArgs = ""
+					pending[item.ID] = &FunctionCallData{Name: item.Name, CallID: item.CallID}
 				}
 
 			case "response.function_call_arguments.delta":
-				fcArgs += event.AsResponseFunctionCallArgumentsDelta().Delta
+				d := event.AsResponseFunctionCallArgumentsDelta()
+				if fc := pending[d.ItemID]; fc != nil {
+					fc.Arguments += d.Delta
+				}
 
 			case "response.function_call_arguments.done":
-				fcArgs = event.AsResponseFunctionCallArgumentsDone().Arguments
-				c.send(ctx, events, StreamEvent{
-					Type: "function_call",
-					FunctionCall: &FunctionCallData{
-						CallID:    fcCallID,
-						Name:      fcName,
-						Arguments: fcArgs,
-					},
-				})
-				fcName, fcCallID, fcArgs = "", "", ""
+				done := event.AsResponseFunctionCallArgumentsDone()
+				fc := pending[done.ItemID]
+				if fc == nil {
+					continue // unknown item id; nothing to emit
+				}
+				fc.Arguments = done.Arguments
+				c.send(ctx, events, StreamEvent{Type: "function_call", FunctionCall: fc})
+				delete(pending, done.ItemID)
 
 			case "response.completed":
 				completed := event.AsResponseCompleted()
