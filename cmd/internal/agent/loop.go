@@ -11,18 +11,17 @@ const maxIterations = 10
 
 // runLoop drives the ReAct loop: stream a turn, execute any tool calls, re-feed
 // their results, and repeat until the model answers with text (no tool calls)
-// or the iteration budget is exhausted. It owns the output channel and always
-// closes it, and it exits promptly when ctx is cancelled.
-func (a *Agent) runLoop(ctx context.Context, userText string, out chan<- Event) {
-	defer close(out)
-
-	kit := KitFor(a.state.Phase)
+// or the iteration budget is exhausted. It reads and updates the caller-owned
+// state (notably PrevResponseID) and exits promptly when ctx is cancelled. The
+// output channel is owned and closed by run, not here.
+func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
+	kit := KitFor(state.Phase)
 
 	req := llm.Request{
-		Input:          userText,
+		Input:          state.input,
 		Instructions:   kit.Instructions,
 		Tools:          kit.Tools,
-		PrevResponseID: a.state.PrevResponseID,
+		PrevResponseID: state.PrevResponseID,
 	}
 
 	for i := 0; i < maxIterations; i++ {
@@ -39,7 +38,7 @@ func (a *Agent) runLoop(ctx context.Context, userText string, out chan<- Event) 
 			return // ctx cancelled or a stream error was already emitted
 		}
 
-		a.state.PrevResponseID = responseID
+		state.recordResponse(responseID)
 
 		if len(pendingCalls) == 0 {
 			// Model produced a final text answer; the turn is complete.

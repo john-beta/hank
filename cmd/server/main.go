@@ -26,7 +26,7 @@ func main() {
 	defer st.Close()
 
 	ag := agent.New(llmClient, st)
-	router := transport.NewRouter(ag)
+	router := transport.NewRouter(ag, st)
 
 	log.Println("Server at :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

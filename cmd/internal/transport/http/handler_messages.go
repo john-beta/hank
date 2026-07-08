@@ -16,10 +16,14 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	if req.SessionID == "" {
+		http.Error(w, "session_id is required", http.StatusBadRequest)
+		return
+	}
 
 	setSSEHeaders(w)
 
-	events := h.agent.Handle(r.Context(), req.Message)
+	events := h.agent.Handle(r.Context(), req.SessionID, req.Message)
 	for event := range events {
 		writeSSE(w, event)
 	}
