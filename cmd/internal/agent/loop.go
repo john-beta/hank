@@ -15,16 +15,16 @@ const maxIterations = 10
 // state (notably PrevResponseID) and exits promptly when ctx is cancelled. The
 // output channel is owned and closed by run, not here.
 func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
-	kit := KitFor(state.Phase)
-
 	req := llm.Request{
 		Input:          state.input,
-		Instructions:   kit.Instructions,
-		Tools:          kit.Tools,
 		PrevResponseID: state.PrevResponseID,
 	}
 
 	for i := 0; i < maxIterations; i++ {
+		kit := KitFor(state.Phase)
+		req.Instructions = kit.Instructions
+		req.Tools = kit.Tools
+
 		streamCh, err := a.llm.Stream(ctx, req)
 		if err != nil {
 			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
@@ -38,7 +38,7 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 			return // ctx cancelled or a stream error was already emitted
 		}
 
-		state.recordResponse(responseID)
+		state.recordResponse(responseID, state.Phase)
 
 		if len(pendingCalls) == 0 {
 			// Model produced a final text answer; the turn is complete.
@@ -57,11 +57,11 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 			toolResults = append(toolResults, llm.ToolResult{CallID: call.CallID, Output: result})
 		}
 
+		state.Phase = NextPhase(state.Phase, pendingCalls)
+
 		// Re-feed tool results. Instructions and Tools are re-sent every turn;
 		// the tool results are the input, so Input stays empty.
 		req = llm.Request{
-			Instructions:   kit.Instructions,
-			Tools:          kit.Tools,
 			PrevResponseID: responseID,
 			ToolResults:    toolResults,
 		}

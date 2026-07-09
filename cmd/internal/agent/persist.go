@@ -46,18 +46,19 @@ func (a *Agent) run(ctx context.Context, sessionID, userText string, out chan<- 
 // (intermediate tool-call turns and the final text turn) and the session's
 // current phase after the loop completes.
 func (a *Agent) persistResult(ctx context.Context, state *State) {
-	for _, respID := range state.responseIDs {
-		a.saveAgentTurn(ctx, state, respID)
+	for _, rec := range state.turnRecords {
+		a.saveAgentTurn(ctx, state.SessionID, rec.ResponseID, rec.Phase)
 	}
 	_ = a.store.UpdateSessionPhase(ctx, state.SessionID, int(state.Phase))
 }
 
-// saveAgentTurn persists a single agent turn linked to its response ID.
-func (a *Agent) saveAgentTurn(ctx context.Context, state *State, responseID string) {
+// saveAgentTurn persists a single agent turn linked to its response ID and the
+// phase active when it was produced.
+func (a *Agent) saveAgentTurn(ctx context.Context, sessionID, responseID string, phase Phase) {
 	respID := responseID
 	_ = a.store.SaveTurn(ctx, store.Turn{
-		SessionID:  state.SessionID,
-		Phase:      int(state.Phase),
+		SessionID:  sessionID,
+		Phase:      int(phase),
 		Role:       "agent",
 		ResponseID: &respID,
 	})
