@@ -57,7 +57,7 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 			toolResults = append(toolResults, llm.ToolResult{CallID: call.CallID, Output: result})
 		}
 
-		state.Phase = NextPhase(state.Phase, pendingCalls)
+		state.Phase = NextPhase(state.Phase, pendingCalls, toolResults)
 
 		// Re-feed tool results. Instructions and Tools are re-sent every turn;
 		// the tool results are the input, so Input stays empty.

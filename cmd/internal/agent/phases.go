@@ -42,6 +42,6 @@ func KitFor(p Phase) PhaseKit {
 // NextPhase decides the phase for the next iteration given the current phase
 // and the tool calls just executed. Scaffold: never transitions. Task 2 adds
 // the real rule here.
-func NextPhase(current Phase, calls []llm.FunctionCallData) Phase {
+func NextPhase(current Phase, calls []llm.FunctionCallData, results []llm.ToolResult) Phase {
 	return current
 }
