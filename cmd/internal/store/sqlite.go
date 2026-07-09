@@ -42,7 +42,7 @@ func (s *SQLiteStore) Close() error {
 
 // CreateSession inserts a new session in PhaseOne (phase 0) and returns it.
 func (s *SQLiteStore) CreateSession(ctx context.Context) (Session, error) {
-	sess := Session{SessionID: uuid.NewString(), Phase: 0}
+	sess := Session{SessionID: uuid.NewString(), Phase: 1}
 	const q = `INSERT INTO session (session_id, phase) VALUES (?, ?)`
 	if _, err := s.db.ExecContext(ctx, q, sess.SessionID, sess.Phase); err != nil {
 		return Session{}, fmt.Errorf("store: create session: %w", err)

@@ -1,22 +1,15 @@
 package agent
 
-import "github.com/john-beta/hank/cmd/internal/store"
-
-// Phase selects which instructions and tools the agent runs with.
-type Phase int
-
-const (
-	// PhaseOne runs with the tool available.
-	PhaseOne Phase = iota
-	// PhaseTwo runs without tools.
-	PhaseTwo
+import (
+	"github.com/john-beta/hank/cmd/internal/agent/phases/phase"
+	"github.com/john-beta/hank/cmd/internal/store"
 )
 
 // State carries conversation state for a single turn. It is built fresh from the
 // store at the start of each request and never held on the Agent.
 type State struct {
 	SessionID      string
-	Phase          Phase
+	Phase          phase.ID
 	PrevResponseID string
 
 	// input is the user's text for this turn. It is transient (not persisted
@@ -35,15 +28,15 @@ type State struct {
 // loop's final phase.
 type turnRecord struct {
 	ResponseID string
-	Phase      Phase
+	Phase      phase.ID
 }
 
 // recordResponse registers a completed model turn: it updates PrevResponseID
 // (used to chain the next request) and appends to the audit trail so every
 // turn — not just the last — can be persisted after the loop.
-func (s *State) recordResponse(id string, phase Phase) {
+func (s *State) recordResponse(id string, ph phase.ID) {
 	s.PrevResponseID = id
-	s.turnRecords = append(s.turnRecords, turnRecord{ResponseID: id, Phase: phase})
+	s.turnRecords = append(s.turnRecords, turnRecord{ResponseID: id, Phase: ph})
 }
 
 // StateFromStore builds the per-turn State from a persisted session and its last
@@ -51,7 +44,7 @@ func (s *State) recordResponse(id string, phase Phase) {
 func StateFromStore(s store.Session, lastAgentTurn *store.Turn) *State {
 	st := &State{
 		SessionID: s.SessionID,
-		Phase:     Phase(s.Phase),
+		Phase:     phase.ID(s.Phase),
 	}
 	if lastAgentTurn != nil && lastAgentTurn.ResponseID != nil {
 		st.PrevResponseID = *lastAgentTurn.ResponseID

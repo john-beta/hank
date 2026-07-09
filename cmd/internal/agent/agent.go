@@ -14,7 +14,6 @@ import (
 type Agent struct {
 	llm   llm.Client
 	store store.Store
-	tools *ToolRegistry
 }
 
 // New wires an agent with its LLM client and store.
@@ -22,7 +21,6 @@ func New(llmClient llm.Client, st store.Store) *Agent {
 	return &Agent{
 		llm:   llmClient,
 		store: st,
-		tools: NewToolRegistry(),
 	}
 }
 
