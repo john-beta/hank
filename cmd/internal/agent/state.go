@@ -18,25 +18,24 @@ type State struct {
 
 	// turnRecords is the ordered audit trail of every model turn produced in
 	// this request's loop — the intermediate tool-call turns and the final
-	// text turn — paired with the phase active when each was produced.
-	// Transient: runLoop appends to it, run persists it.
+	// text turn. Transient: runLoop appends to it, run persists it.
 	turnRecords []turnRecord
 }
 
-// turnRecord pairs a completed model response with the phase active when it
-// was produced, so persistence reflects the phase at the time, not the
-// loop's final phase.
+// turnRecord identifies a completed model response for persistence.  No
+// per-record phase is needed: Phase is fixed for the whole loop (decided once
+// from the store before runLoop starts and only revisited after it ends), so
+// every turn produced in a request shares state.Phase.
 type turnRecord struct {
 	ResponseID string
-	Phase      phase.ID
 }
 
 // recordResponse registers a completed model turn: it updates PrevResponseID
 // (used to chain the next request) and appends to the audit trail so every
 // turn — not just the last — can be persisted after the loop.
-func (s *State) recordResponse(id string, ph phase.ID) {
+func (s *State) recordResponse(id string) {
 	s.PrevResponseID = id
-	s.turnRecords = append(s.turnRecords, turnRecord{ResponseID: id, Phase: ph})
+	s.turnRecords = append(s.turnRecords, turnRecord{ResponseID: id})
 }
 
 // StateFromStore builds the per-turn State from a persisted session and its last

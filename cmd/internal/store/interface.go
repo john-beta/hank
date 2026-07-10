@@ -30,7 +30,6 @@ type Turn struct {
 type Store interface {
 	CreateSession(ctx context.Context) (Session, error)
 	GetSession(ctx context.Context, sessionID string) (Session, error)
-	UpdateSessionPhase(ctx context.Context, sessionID string, phase int) error
 
 	SaveTurn(ctx context.Context, t Turn) error
 	LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error)

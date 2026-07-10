@@ -43,13 +43,14 @@ func (a *Agent) run(ctx context.Context, sessionID, userText string, out chan<- 
 }
 
 // persistResult records one agent turn per model response produced in the loop
-// (intermediate tool-call turns and the final text turn) and the session's
-// current phase after the loop completes.
+// (intermediate tool-call turns and the final text turn), all under the
+// single phase that governed the whole loop. It does not decide or persist a
+// phase transition for the session — Phase is fixed for a request; advancing
+// it for the next one is handled elsewhere (not yet implemented).
 func (a *Agent) persistResult(ctx context.Context, state *State) {
 	for _, rec := range state.turnRecords {
-		a.saveAgentTurn(ctx, state.SessionID, rec.ResponseID, int(rec.Phase))
+		a.saveAgentTurn(ctx, state.SessionID, rec.ResponseID, int(state.Phase))
 	}
-	_ = a.store.UpdateSessionPhase(ctx, state.SessionID, int(state.Phase))
 }
 
 // saveAgentTurn persists a single agent turn linked to its response ID and the

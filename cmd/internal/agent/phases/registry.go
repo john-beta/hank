@@ -23,8 +23,8 @@ func Get(id phase.ID) phase.Interface {
 	}
 }
 
-// emptyPhase is the null object for an unknown/unset phase: no instructions, no
-// tools, no transition, and any tool call is an error.
+// emptyPhase is the null object for an unknown/unset phase: no instructions,
+// no tools, and any tool call is an error.
 type emptyPhase struct{}
 
 var _ phase.Interface = emptyPhase{}
@@ -34,8 +34,4 @@ func (emptyPhase) Tools() []llm.ToolDef { return nil }
 
 func (emptyPhase) Execute(name, args string) (string, error) {
 	return "", fmt.Errorf("phases: empty phase cannot execute tool %q", name)
-}
-
-func (emptyPhase) Next(calls []llm.FunctionCallData, results []llm.ToolResult) phase.ID {
-	return phase.ID(0)
 }

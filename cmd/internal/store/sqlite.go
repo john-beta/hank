@@ -61,15 +61,6 @@ func (s *SQLiteStore) GetSession(ctx context.Context, sessionID string) (Session
 	return sess, nil
 }
 
-// UpdateSessionPhase sets the current phase of a session.
-func (s *SQLiteStore) UpdateSessionPhase(ctx context.Context, sessionID string, phase int) error {
-	const q = `UPDATE session SET phase = ? WHERE session_id = ?`
-	if _, err := s.db.ExecContext(ctx, q, phase, sessionID); err != nil {
-		return fmt.Errorf("store: update session phase %s: %w", sessionID, err)
-	}
-	return nil
-}
-
 // SaveTurn inserts a turn, generating its turn_id.
 func (s *SQLiteStore) SaveTurn(ctx context.Context, t Turn) error {
 	const q = `INSERT INTO turn (turn_id, session_id, response_id, phase, role, content)

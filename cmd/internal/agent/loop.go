@@ -16,15 +16,17 @@ const maxIterations = 10
 // state (notably PrevResponseID) and exits promptly when ctx is cancelled. The
 // output channel is owned and closed by run, not here.
 func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
+
+	phase := phases.Get(state.Phase)
+
 	req := llm.Request{
 		Input:          state.input,
 		PrevResponseID: state.PrevResponseID,
 	}
 
 	for i := 0; i < maxIterations; i++ {
-		current := phases.Get(state.Phase)
-		req.Instructions = current.Instructions()
-		req.Tools = current.Tools()
+		req.Instructions = phase.Instructions()
+		req.Tools = phase.Tools()
 
 		streamCh, err := a.llm.Stream(ctx, req)
 		if err != nil {
@@ -39,7 +41,7 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 			return // ctx cancelled or a stream error was already emitted
 		}
 
-		state.recordResponse(responseID, state.Phase)
+		state.recordResponse(responseID)
 
 		if len(pendingCalls) == 0 {
 			// Model produced a final text answer; the turn is complete.
@@ -50,7 +52,7 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 		// Execute each tool call and prepare its result for the next turn.
 		toolResults := make([]llm.ToolResult, 0, len(pendingCalls))
 		for _, call := range pendingCalls {
-			result, err := current.Execute(call.Name, call.Arguments)
+			result, err := phase.Execute(call.Name, call.Arguments)
 			if err != nil {
 				result = err.Error()
 			}
@@ -58,13 +60,12 @@ func (a *Agent) runLoop(ctx context.Context, state *State, out chan<- Event) {
 			toolResults = append(toolResults, llm.ToolResult{CallID: call.CallID, Output: result})
 		}
 
-		state.Phase = current.Next(pendingCalls, toolResults)
-
-		// Re-feed tool results. Instructions and Tools are re-set at the top of
-		// the next iteration; the tool results are the input, so Input stays empty.
+		// Re-feed tool results. Instructions and Tools come from phase, fixed
+		// for the whole loop, so only PrevResponseID and ToolResults change
+		// between iterations; Input stays empty.
 		req = llm.Request{
-			PrevResponseID: responseID,
 			ToolResults:    toolResults,
+			PrevResponseID: responseID,
 		}
 	}
 

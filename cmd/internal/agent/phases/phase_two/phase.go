@@ -13,10 +13,3 @@ var _ phase.Interface = Phase{}
 func (Phase) Instructions() string                      { return instructions }
 func (Phase) Tools() []llm.ToolDef                      { return tools }
 func (Phase) Execute(name, args string) (string, error) { return execute(name, args) }
-
-func (Phase) Next(
-	calls []llm.FunctionCallData,
-	results []llm.ToolResult,
-) phase.ID {
-	return phase.PhaseTwoID
-}

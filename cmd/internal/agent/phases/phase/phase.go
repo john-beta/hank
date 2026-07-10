@@ -13,7 +13,6 @@ type Interface interface {
 	Instructions() string
 	Tools() []llm.ToolDef
 	Execute(name, args string) (string, error)
-	Next(calls []llm.FunctionCallData, results []llm.ToolResult) ID
 }
 
 const (
