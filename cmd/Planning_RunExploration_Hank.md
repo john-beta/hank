@@ -10,7 +10,7 @@ Description:
 
 Executes a given Python script that explores the workspace and returns the exploration results.
 
-DO NOT use this tool when you have understood the workspace and have coverage for the requested curation criteria — stop exploring and propose.
+DO NOT use this tool once your exploration covers what the requested curation criteria requires — stop exploring and propose.
 
 Usage:
 
@@ -25,7 +25,7 @@ Python Notes:
 - Use `os` ONLY if `pathlib` does not provide the required functionality.
 - Use `json` to return the exploration results as a single JSON value.
 - Write the JSON result to standard output using `print` — only stdout is captured as the exploration result. If you do not use `print`, the results will not be captured and the exploration will fail.
-- Return only the data relevant for the current exploration.
+- Return only the data relevant to the current exploration, and choose the JSON structure — its keys and nesting — that best fits what this exploration needs, so the results are easy to observe and reason over. Do not force a fixed shape across explorations.
 - Navigate ONLY within the workspace directory, keeping all script operations strictly scoped to its root path.
 
 # Safety Protocol — Read-Only

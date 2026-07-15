@@ -31,6 +31,8 @@ Usage:
 
 - Include one entry for each file in the proposal.
 
+- Every entry must be a file path; folders exist only as segments within a file's path, never as standalone entries. Do not propose an empty folder — a folder appears in the structure only when it contains at least one file. If the curation criteria would require a folder with no files, do not invent a placeholder file: explain the situation to the user instead.
+
 - Every proposal must contain the complete `workspace_entries` array. If the user requests changes, regenerate and resubmit the entire proposal with the requested updates applied.
 
 Example:
