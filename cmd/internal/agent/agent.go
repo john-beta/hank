@@ -24,10 +24,11 @@ func New(llmClient llm.Client, st store.Store) *Agent {
 	}
 }
 
-// Handle starts a turn for userText within sessionID and returns a channel of
-// events. The channel is closed when the turn completes or ctx is cancelled.
-func (a *Agent) Handle(ctx context.Context, sessionID, userText string) <-chan Event {
+// Handle starts a turn for the given input within sessionID and returns a
+// channel of events. The channel is closed when the turn completes or ctx is
+// cancelled.
+func (a *Agent) Handle(ctx context.Context, sessionID string, input TurnInput) <-chan Event {
 	out := make(chan Event)
-	go a.run(ctx, sessionID, userText, out)
+	go a.run(ctx, sessionID, input, out)
 	return out
 }

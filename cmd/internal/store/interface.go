@@ -5,32 +5,56 @@ import (
 	"time"
 )
 
-// Session is a conversation thread. Phase tracks its current position in the
-// agent's phase progression.
+// Session is a conversation thread bound to a workspace. RootDir is the path the
+// agent curates; ApprovedProposal is the single domain boolean that determines
+// the agent's operating mode (false -> Planning, true -> Executing). The mode
+// itself is never persisted — it is derived from ApprovedProposal.
 type Session struct {
-	SessionID string
-	Phase     int
-	CreatedAt time.Time
+	SessionID        string
+	RootDir          string
+	ApprovedProposal bool
+	CreatedAt        time.Time
 }
 
-// Turn is a single exchange within a session. A user turn carries Content and a
-// nil ResponseID; an agent turn carries a ResponseID and nil Content (its text
-// is reconstructed from OpenAI via ResponseID later).
+// Turn is a single exchange within a session. See migrations.go for the
+// output_text semantics: it holds a user's plain message or an agent's streamed
+// text, and is nil for a user turn that carries a tool result (whose payload
+// lands via the call.result UPDATE instead).
 type Turn struct {
 	TurnID     string
 	SessionID  string
-	ResponseID *string // nil for user turns
-	Phase      int
 	Role       string  // "user" or "agent"
-	Content    *string // nil for agent turns
+	OutputText *string // nil for tool-result user turns
+	ResponseID *string // nil for user turns
 	CreatedAt  time.Time
 }
 
-// Store is the persistence boundary for sessions and turns.
-type Store interface {
-	CreateSession(ctx context.Context) (Session, error)
-	GetSession(ctx context.Context, sessionID string) (Session, error)
+// Call is one tool call emitted by the agent. Exactly one row exists per CallID:
+// inserted with Result nil, then updated in place when the tool resolves.
+// AutoReFeed mirrors the tool's agent-domain metadata so PendingCall can filter
+// out auto-fed calls the client never has to resolve.
+type Call struct {
+	CallID     string
+	TurnID     string
+	Name       string
+	Args       *string
+	Result     *string
+	AutoReFeed bool
+}
 
-	SaveTurn(ctx context.Context, t Turn) error
+// Store is the persistence boundary for sessions, turns, and calls.
+type Store interface {
+	CreateSession(ctx context.Context, rootDir string) (Session, error)
+	GetSession(ctx context.Context, sessionID string) (Session, error)
+	SetApprovedProposal(ctx context.Context, sessionID string, v bool) error
+
+	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
 	LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error)
+
+	SaveCall(ctx context.Context, c Call) error
+	UpdateCallResult(ctx context.Context, callID string, result string) error
+	// PendingCall returns the single unresolved, non-auto call for the session's
+	// latest agent turn (result IS NULL AND auto_re_feed = 0), or nil, nil if
+	// there is none.
+	PendingCall(ctx context.Context, sessionID string) (*Call, error)
 }

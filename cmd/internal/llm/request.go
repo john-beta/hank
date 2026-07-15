@@ -11,9 +11,10 @@ import (
 // sent as the turn's input.
 func buildParams(req Request) responses.ResponseNewParams {
 	params := responses.ResponseNewParams{
-		Model:        openai.ChatModelGPT4o,
-		Instructions: openai.String(req.Instructions),
-		Tools:        mapTools(req.Tools),
+		Model:             openai.ChatModelGPT4o,
+		Instructions:      openai.String(req.Instructions),
+		Tools:             mapTools(req.Tools),
+		ParallelToolCalls: openai.Bool(false),
 	}
 
 	if req.Temperature > 0 {
@@ -50,6 +51,8 @@ func mapTools(defs []ToolDef) []responses.ToolUnionParam {
 	}
 	tools := make([]responses.ToolUnionParam, 0, len(defs))
 	for _, d := range defs {
+		// AutoReFeed is intentionally not copied here: it is agent metadata, not
+		// part of the OpenAI function tool definition.
 		tools = append(tools, responses.ToolUnionParam{
 			OfFunction: &responses.FunctionToolParam{
 				Name:        d.Name,

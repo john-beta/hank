@@ -15,11 +15,16 @@ type Request struct {
 	ToolResults []ToolResult
 }
 
-// ToolDef describes a function tool the model may call.
+// ToolDef describes a function tool the model may call. AutoReFeed is
+// agent-domain metadata — the single source of truth for whether the loop
+// executes the tool and re-feeds its result automatically (true) or stops the
+// turn so the client resolves it (false). It is deliberately NOT part of the
+// OpenAI tool definition and is stripped before the request reaches the SDK.
 type ToolDef struct {
 	Name        string
 	Description string
 	Parameters  map[string]any
+	AutoReFeed  bool
 }
 
 // ToolResult is the output of an executed tool, tied to the call that produced it.
