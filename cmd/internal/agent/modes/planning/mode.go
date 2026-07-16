@@ -5,7 +5,7 @@ import (
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// Mode is the Planning mode: active while session.approved_proposal is false. It
+// Mode is the Planning mode: active while the approval boolean is false. It
 // is a stateless value type.
 type Mode struct{}
 

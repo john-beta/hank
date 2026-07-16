@@ -19,7 +19,6 @@ const schema = `
 CREATE TABLE IF NOT EXISTS session (
     session_id        TEXT PRIMARY KEY,
     root_dir          TEXT NOT NULL,
-    approved_proposal INTEGER NOT NULL DEFAULT 0,
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

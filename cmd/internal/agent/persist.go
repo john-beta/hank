@@ -101,13 +101,11 @@ func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *
 	}
 
 	// Read a single `approved` boolean from the result JSON — no other
-	// interpretation of the payload. An approving result flips the session into
-	// Executing for this and every future turn.
+	// interpretation of the payload. An approving result flips this in-memory
+	// state to Executing for the rest of this turn; nothing is persisted, so
+	// the next request starts back at Planning unless it too carries an
+	// approving result.
 	if approvedFromResult(tr.Result) {
-		if err := a.store.SetApprovedProposal(ctx, state.SessionID, true); err != nil {
-			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
-			return llm.Request{}, false
-		}
 		state.ApprovedProposal = true
 	}
 

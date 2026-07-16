@@ -3,7 +3,8 @@ package mode
 import "github.com/john-beta/hank/cmd/internal/llm"
 
 // ID identifies an operating mode. The mode is never persisted: it is derived
-// from session.approved_proposal via Resolve. There are exactly two.
+// per request from the in-memory approval boolean via Resolve. There are
+// exactly two.
 type ID int
 
 const (
@@ -22,9 +23,10 @@ type Interface interface {
 	Execute(name, args string) (string, error)
 }
 
-// Resolve maps the single domain boolean to an operating mode. This replaces
-// reading a persisted phase column: while approved_proposal is false the agent
-// plans; once it is true the agent executes.
+// Resolve maps the single domain boolean to an operating mode: while
+// approvedProposal is false the agent plans; once it is true the agent
+// executes. Nothing here is persisted — the caller computes the boolean fresh
+// for each request.
 //
 // The flip is one-way for now — there is no Executing -> Planning transition;
 // that is future work.

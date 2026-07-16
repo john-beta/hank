@@ -12,7 +12,7 @@ import (
 // Get returns the mode implementation for id. An unknown id yields emptyMode,
 // which drives the loop to a clean, tool-less, instruction-less completion
 // instead of panicking. The id itself is produced by mode.Resolve from the
-// session's approved_proposal boolean.
+// in-memory approval boolean.
 func Get(id mode.ID) mode.Interface {
 	switch id {
 	case mode.Planning:

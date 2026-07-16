@@ -5,7 +5,7 @@ import (
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// Mode is the Executing mode: active once session.approved_proposal is true. It
+// Mode is the Executing mode: active once the approval boolean is true. It
 // is a stateless value type.
 type Mode struct{}
 

@@ -5,15 +5,14 @@ import (
 	"time"
 )
 
-// Session is a conversation thread bound to a workspace. RootDir is the path the
-// agent curates; ApprovedProposal is the single domain boolean that determines
-// the agent's operating mode (false -> Planning, true -> Executing). The mode
-// itself is never persisted — it is derived from ApprovedProposal.
+// Session is a conversation thread bound to a workspace. RootDir is the path
+// the agent curates. The operating mode (Planning/Executing) is not part of
+// Session at all — it is computed per request in the agent layer, never
+// persisted here.
 type Session struct {
-	SessionID        string
-	RootDir          string
-	ApprovedProposal bool
-	CreatedAt        time.Time
+	SessionID string
+	RootDir   string
+	CreatedAt time.Time
 }
 
 // Turn is a single exchange within a session. See migrations.go for the
@@ -46,7 +45,6 @@ type Call struct {
 type Store interface {
 	CreateSession(ctx context.Context, rootDir string) (Session, error)
 	GetSession(ctx context.Context, sessionID string) (Session, error)
-	SetApprovedProposal(ctx context.Context, sessionID string, v bool) error
 
 	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
 	LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error)

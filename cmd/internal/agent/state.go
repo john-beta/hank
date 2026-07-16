@@ -5,9 +5,11 @@ import (
 )
 
 // State carries conversation state for a single turn. It is built fresh from the
-// store at the start of each request and never held on the Agent. The operating
-// mode is NOT stored here — it is derived from ApprovedProposal by mode.Resolve
-// once, before the loop.
+// store at the start of each request and never held on the Agent. ApprovedProposal
+// is not persisted anywhere — it starts false every request and is only flipped
+// in-memory, within prepareToolResultRequest, when that same turn's tool result
+// approves. The operating mode is derived from it by mode.Resolve once, before
+// the loop.
 type State struct {
 	SessionID        string
 	RootDir          string
@@ -17,11 +19,11 @@ type State struct {
 
 // StateFromStore builds the per-turn State from a persisted session and its last
 // agent turn (if any). A nil lastAgentTurn means this is the first turn.
+// ApprovedProposal always starts false here — the store carries no such signal.
 func StateFromStore(s store.Session, lastAgentTurn *store.Turn) *State {
 	st := &State{
-		SessionID:        s.SessionID,
-		RootDir:          s.RootDir,
-		ApprovedProposal: s.ApprovedProposal,
+		SessionID: s.SessionID,
+		RootDir:   s.RootDir,
 	}
 	if lastAgentTurn != nil && lastAgentTurn.ResponseID != nil {
 		st.PrevResponseID = *lastAgentTurn.ResponseID
