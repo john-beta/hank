@@ -7,7 +7,7 @@ import (
 
 	"github.com/john-beta/hank/cmd/internal/agent"
 	"github.com/john-beta/hank/cmd/internal/llm"
-	"github.com/john-beta/hank/cmd/internal/store"
+	"github.com/john-beta/hank/cmd/internal/store/sqlite"
 	transport "github.com/john-beta/hank/cmd/internal/transport/http"
 )
 
