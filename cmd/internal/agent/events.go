@@ -1,5 +1,7 @@
 package agent
 
+import "context"
+
 // EventType enumerates the agent-level events streamed to transports.
 type EventType string
 
@@ -29,4 +31,25 @@ type Event struct {
 	AutoReFeed *bool     `json:"auto_re_feed,omitempty"`
 	Error      string    `json:"error,omitempty"`
 	ResponseID string    `json:"response_id,omitempty"`
+}
+
+// emit sends an event unless ctx is cancelled first, so the loop goroutine
+// never blocks on an abandoned channel.
+func (a *Agent) emit(ctx context.Context, out chan<- Event, ev Event) {
+	select {
+	case out <- ev:
+	case <-ctx.Done():
+	}
+}
+
+// fail emits an error event and reports true if err is non-nil, so callers in
+// the ReAct loop can write `if a.fail(ctx, out, err) { return ... }` instead of
+// repeating the emit. Scoped to loop.go/step.go/call.go for now — persist.go
+// keeps its own explicit emit calls.
+func (a *Agent) fail(ctx context.Context, out chan<- Event, err error) bool {
+	if err == nil {
+		return false
+	}
+	a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+	return true
 }
