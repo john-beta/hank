@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 	"github.com/john-beta/hank/cmd/internal/llm"
 	"github.com/john-beta/hank/cmd/internal/store"
 )
@@ -31,4 +32,37 @@ func (a *Agent) Handle(ctx context.Context, sessionID string, input TurnInput) <
 	out := make(chan Event)
 	go a.run(ctx, sessionID, input, out)
 	return out
+}
+
+// run is Handle's goroutine body: load session state, build the initial LLM
+// request from input (this is where the possible Planning -> Executing
+// transition happens, before the loop, never inside it), resolve the mode
+// once, then run the loop. It owns the output channel and always closes it.
+func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out chan<- Event) {
+	defer close(out)
+
+	sess, err := a.store.GetSession(ctx, sessionID)
+	if err != nil {
+		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+		return
+	}
+
+	lastAgentTurn, err := a.store.LastAgentTurn(ctx, sessionID)
+	if err != nil {
+		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+		return
+	}
+
+	state := StateFromStore(sess, lastAgentTurn)
+
+	req, ok := a.prepareRequest(ctx, state, input, out)
+	if !ok {
+		return // an error event was already emitted
+	}
+
+	// Mode is derived from the (possibly just-flipped) approval boolean, resolved
+	// once and held fixed for the whole loop.
+	modeID := mode.Resolve(state.ApprovedProposal)
+
+	a.runLoop(ctx, state, modeID, req, out)
 }

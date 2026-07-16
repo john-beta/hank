@@ -6,6 +6,7 @@ import (
 
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 	"github.com/john-beta/hank/cmd/internal/llm"
+	"github.com/john-beta/hank/cmd/internal/store"
 )
 
 // runStep runs exactly one model response: stream it, persist the resulting
@@ -89,4 +90,18 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 			}
 		}
 	}
+}
+
+// saveAgentTurn persists one agent turn produced in the loop: its streamed text
+// (output_text) and response ID. It returns the generated turn_id so a call
+// emitted in that same response can be linked to it.
+func (a *Agent) saveAgentTurn(ctx context.Context, sessionID, responseID, outputText string) (string, error) {
+	respID := responseID
+	text := outputText
+	return a.store.SaveTurn(ctx, store.Turn{
+		SessionID:  sessionID,
+		Role:       "agent",
+		OutputText: &text,
+		ResponseID: &respID,
+	})
 }
