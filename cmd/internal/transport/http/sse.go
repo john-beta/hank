@@ -2,11 +2,15 @@ package transport
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/john-beta/hank/cmd/internal/agent"
 )
+
+type SSEJsonError struct{
+	Type string
+	Error string
+}
 
 func setSSEHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -16,8 +20,13 @@ func setSSEHeaders(w http.ResponseWriter) {
 
 // writeSSE flushes explicitly so the client receives each frame immediately.
 func writeSSE(w http.ResponseWriter, event agent.Event) {
-	data, _ := json.Marshal(event)
-	fmt.Fprintf(w, "data: %s\n\n", data)
+	data, err := json.Marshal(event)
+	
+	if err != nil {
+		data, _ = json.Marshal(SSEJsonError{Type: "error", Error: err.Error()})
+	}
+
+	w.Write(data)
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
