@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 
-	"github.com/john-beta/hank/cmd/internal/agent/modes"
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
@@ -17,10 +16,8 @@ const maxIterations = 10
 // so runLoop's only job past that point is to stop.
 //
 // The initial req is supplied by run (either fresh input or a client tool
-// result). The output channel is owned and closed by run.
-func (a *Agent) runLoop(ctx context.Context, state *State, modeID mode.ID, req llm.Request, out chan<- Event) {
-	m := modes.Get(modeID)
-
+// result), and m by resolveMode. The output channel is owned and closed by run.
+func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Interface, req llm.Request, out chan<- Event) {
 	for i := 0; i < maxIterations; i++ {
 		next, cont := a.runStep(ctx, state, m, req, out)
 		if !cont {

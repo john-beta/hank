@@ -3,7 +3,9 @@ package agent
 import (
 	"context"
 
+	"github.com/john-beta/hank/cmd/internal/agent/modes/executing"
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
+	"github.com/john-beta/hank/cmd/internal/agent/modes/planning"
 	"github.com/john-beta/hank/cmd/internal/llm"
 	"github.com/john-beta/hank/cmd/internal/store"
 )
@@ -62,7 +64,21 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 
 	// Mode is derived from the (possibly just-flipped) approval boolean, resolved
 	// once and held fixed for the whole loop.
-	modeID := mode.Resolve(state.ApprovedProposal)
+	m := resolveMode(state.ApprovedProposal)
 
-	a.runLoop(ctx, state, modeID, req, out)
+	a.runLoop(ctx, state, m, req, out)
+}
+
+// resolveMode maps the single domain boolean to a mode implementation: while
+// approvedProposal is false the agent plans; once it is true the agent
+// executes. There are exactly two modes by design (see mode.Interface) — no
+// registry/lookup-by-ID layer needed for that.
+//
+// The flip is one-way for now — there is no Executing -> Planning transition;
+// that is future work.
+func resolveMode(approvedProposal bool) mode.Interface {
+	if approvedProposal {
+		return executing.Mode{}
+	}
+	return planning.Mode{}
 }

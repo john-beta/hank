@@ -19,7 +19,7 @@ cmd/
 ├── internal/
 │   ├── agent/            ← orchestration layer (stateless, transport-agnostic)
 │   │   ├── modes/            ← business logic layer (mode interface + implementations)
-│   │   │   ├── mode/              ← shared Interface + ID contract + Resolve + AutoReFeed
+│   │   │   ├── mode/              ← shared Interface contract + AutoReFeed (no registry/ID — see below)
 │   │   │   ├── planning/          ← Planning mode (ApprovedProposal == false)
 │   │   │   └── executing/         ← Executing mode (ApprovedProposal == true)
 │   │   ├── agent.go          ← Agent struct, New, Handle (public API) + run (its goroutine body)
@@ -82,7 +82,7 @@ transport/http  →  agent  →  llm
 
 Does not know what the modes do internally — it talks to them only through the shared mode interface.
 
-**`modes`** — Business logic. Each mode is a self-contained unit implementing the shared mode interface. A mode bundles: instructions (system prompt), tool definitions (what the LLM can call), and tool execution (what happens when the LLM calls a tool). Each mode lives in its own subpackage (`planning/`, `executing/`) with its own files for instructions, tools, and execution. The registry (`registry.go`) maps mode IDs to concrete implementations; `emptyMode` is the null object. The active mode is **derived, never persisted** — `mode.Resolve(approvedProposal)` computes it once per request. There is no transition/`Next` method: the Planning → Executing move is a one-way boolean flip, resolved pre-loop.
+**`modes`** — Business logic. Each mode is a self-contained unit implementing the shared mode interface (`mode.Interface`, in the `mode` subpackage). A mode bundles: instructions (system prompt), tool definitions (what the LLM can call), and tool execution (what happens when the LLM calls a tool). Each mode lives in its own subpackage (`planning/`, `executing/`) with its own files for instructions, tools, and execution. There are exactly two modes and that is fixed for the scope of this project, so there is no registry/lookup-by-ID layer: `agent.resolveMode(approvedProposal)` (in `agent.go`) just constructs `executing.Mode{}` or `planning.Mode{}` directly and returns it as `mode.Interface`. The active mode is **derived, never persisted** — computed once per request. There is no transition/`Next` method: the Planning → Executing move is a one-way boolean flip, resolved pre-loop.
 
 **`llm`** — OpenAI adapter. Wraps the SDK behind a `Client` interface. Translates between agent-level types (`Request`, `StreamEvent`) and SDK types (`ResponseNewParams`, stream events). Sets `ParallelToolCalls: false` (one function call per response). The only package that imports `github.com/openai/openai-go/v3`. `ToolDef.AutoReFeed` is agent metadata and is stripped here — it never reaches OpenAI.
 
@@ -90,7 +90,7 @@ Does not know what the modes do internally — it talks to them only through the
 
 ### Key patterns
 
-**Mode-driven turns.** At the start of a request the mode is resolved once from `State.ApprovedProposal` via `mode.Resolve`, then held fixed for the whole loop. The loop reads `Instructions()` and `Tools()` from it fresh on every iteration. Instructions and tools are NOT inherited between turns — they are explicitly re-sent each time. This prevents hallucination from stale context and enables each mode to fully control what the model sees.
+**Mode-driven turns.** At the start of a request the mode is resolved once from `State.ApprovedProposal` via `agent.resolveMode`, then held fixed for the whole loop. The loop reads `Instructions()` and `Tools()` from it fresh on every iteration. Instructions and tools are NOT inherited between turns — they are explicitly re-sent each time. This prevents hallucination from stale context and enables each mode to fully control what the model sees.
 
 `ApprovedProposal` is computed, not read: `StateFromStore` always starts it at `false` (the store has no such column), and `prepareToolResultRequest` (in `input.go`) flips it to `true` in memory, for the rest of the current request only, when the incoming tool result carries `"approved": true`. Nothing is written back to the store. This means the flip does **not** survive past the request it happened in — the very next request starts back at Planning unless that request's own tool result approves again. This is a deliberate simplification of the scaffold, not a bug: see [Database](#database).
 
@@ -169,7 +169,7 @@ go mod tidy
 
 ## Modes (Planning & Executing)
 
-There are exactly two modes; the model is *while `ApprovedProposal` is false the agent plans; once it is true the agent executes*. Each mode lives in `internal/agent/modes/<name>/` with three files — `mode.go`, `instructions.go`, `tools.go` — and implements the mode interface (`var _ mode.Interface = Mode{}` for a compile-time check). The registry (`modes/registry.go`) maps `mode.Planning`/`mode.Executing` IDs to the implementations.
+There are exactly two modes; the model is *while `ApprovedProposal` is false the agent plans; once it is true the agent executes*. Each mode lives in `internal/agent/modes/<name>/` with three files — `mode.go`, `instructions.go`, `tools.go` — and implements the mode interface (`var _ mode.Interface = Mode{}` for a compile-time check). Since there are exactly two, `agent.resolveMode` in `agent.go` picks the implementation directly with an `if`/`else` on `ApprovedProposal` — no registry, no `ID` type, no lookup-by-name indirection.
 
 The mode boundary is structural: `RunExecution` is present only in Executing's `Tools()` and dispatch; `ProposeStructure` is present only in Planning's. Adding a genuinely new mode would mean a new `ID` constant + `Resolve` branch, but the current design is fixed at two — do not add a third speculatively.
 

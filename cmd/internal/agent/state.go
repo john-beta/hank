@@ -8,7 +8,7 @@ import (
 // store at the start of each request and never held on the Agent. ApprovedProposal
 // is not persisted anywhere — it starts false every request and is only flipped
 // in-memory, within prepareToolResultRequest, when that same turn's tool result
-// approves. The operating mode is derived from it by mode.Resolve once, before
+// approves. The operating mode is derived from it by resolveMode once, before
 // the loop.
 type State struct {
 	SessionID        string
