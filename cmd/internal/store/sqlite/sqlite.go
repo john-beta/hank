@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	_ "modernc.org/sqlite" // pure-Go SQLite driver registration
-
-	"github.com/john-beta/hank/cmd/internal/store"
 )
 
 // SQLiteStore is a pure-Go SQLite-backed Store.
@@ -14,10 +12,9 @@ type SQLiteStore struct {
 	db *sql.DB
 }
 
-var _ store.Store = (*SQLiteStore)(nil)
-
 func NewSQLite(path string) (*SQLiteStore, error) {
 	db, err := sql.Open("sqlite", path)
+
 	if err != nil {
 		return nil, err
 	}

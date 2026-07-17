@@ -11,8 +11,6 @@ type OpenAIClient struct {
 	client *openai.Client
 }
 
-var _ Client = (*OpenAIClient)(nil)
-
 func NewOpenAIClient(apiKey string) *OpenAIClient {
 	c := openai.NewClient(option.WithAPIKey(apiKey))
 	return &OpenAIClient{client: &c}
