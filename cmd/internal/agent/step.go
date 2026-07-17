@@ -9,14 +9,9 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// runStep runs exactly one model response and either ends the turn (no call,
-// or a non-auto call) or hands off to handleCall for an auto one. Instructions
-// and Tools are re-read from the mode on every call, never cached across
-// iterations — OpenAI's PreviousResponseID does not carry them forward, so a
-// cached copy would silently drop instructions/tools after the first Step.
-// One runStep call persists exactly one store.Turn; a single client-visible
-// turn can drive several Steps when auto_re_feed chains the model further
-// without the client's involvement (see CLAUDE.md, "Turn vs. Step").
+// runStep runs one model response and either ends the turn or hands an auto
+// call off to handleCall. Instructions/Tools are re-set every Step because
+// OpenAI's PreviousResponseID does not carry them forward.
 func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
 	req.Instructions = m.Instructions
 	req.Tools = m.Tools
@@ -49,11 +44,9 @@ type streamResult struct {
 	text       string
 }
 
-// consume drains one stream: forwards text deltas as they arrive, accumulates
-// the single function call (ParallelToolCalls is off, so there's never more
-// than one), and does not emit tool_call itself — handleCall does, once
-// auto_re_feed is known. ok=false means ctx was cancelled or a stream error
-// was already emitted; either way the loop should stop.
+// consume drains one stream: forwards text deltas, accumulates the single
+// function call (ParallelToolCalls is off, so never more than one), and does
+// not emit tool_call itself — handleCall does, once auto_re_feed is known.
 func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan llm.StreamEvent) (streamResult, bool) {
 	var res streamResult
 	var text strings.Builder
@@ -84,8 +77,6 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 	}
 }
 
-// saveAgentTurn reads sessionID/responseID/text off state/res so callers
-// never re-derive or repeat them.
 func (a *Agent) saveAgentTurn(ctx context.Context, state *State, res streamResult) (string, error) {
 	respID := res.responseID
 	text := res.text

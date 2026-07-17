@@ -7,9 +7,7 @@ import (
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// RunExecution is kept a distinct tool from RunExploration — its presence
-// here and absence from Planning is the mode boundary, even though the two
-// may later share an executor.
+// RunExecution's presence here and absence from Planning is the mode boundary.
 var tools = []llm.ToolDef{
 	mode.RunExploration,
 	{
@@ -26,8 +24,7 @@ var tools = []llm.ToolDef{
 	},
 }
 
-// execute routes Executing's known tool names. Handler bodies are stubs until
-// the real logic is written; an unknown name is an error.
+// execute routes Executing's tool names; bodies are stubs until the real logic lands.
 func execute(name, args string) (string, error) {
 	switch name {
 	case "RunExploration":

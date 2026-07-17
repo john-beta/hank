@@ -16,8 +16,8 @@ type TurnInput struct {
 	ToolResult *ToolResultInput
 }
 
-// ToolResultInput carries the client's resolution of a pending call. Result
-// is the tool output, passed through as a raw JSON string.
+// ToolResultInput carries the client's resolution of a pending call; Result is
+// the tool output as a raw JSON string.
 type ToolResultInput struct {
 	CallID string
 	Result string

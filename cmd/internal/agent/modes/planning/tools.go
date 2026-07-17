@@ -7,9 +7,9 @@ import (
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// ProposeStructure is not auto-re-fed — the client resolves it, and an
-// approving result is what flips the session into Executing. RunExecution is
-// deliberately absent from this set; its absence is the mode boundary.
+// ProposeStructure is not auto-re-fed: the client resolves it, and an approving
+// result flips the session into Executing. RunExecution is absent by design —
+// its absence is the mode boundary.
 var tools = []llm.ToolDef{
 	mode.RunExploration,
 	{
@@ -42,8 +42,7 @@ var tools = []llm.ToolDef{
 	},
 }
 
-// execute routes Planning's known tool names. Handler bodies are stubs until
-// the real logic is written; an unknown name is an error.
+// execute routes Planning's tool names; bodies are stubs until the real logic lands.
 func execute(name, args string) (string, error) {
 	switch name {
 	case "RunExploration":

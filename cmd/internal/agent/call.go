@@ -8,11 +8,10 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// handleCall runs once a step's response includes a call: it persists the
-// turn and the call row (result NULL), then either stops for the client to
-// resolve a non-auto call, or executes and re-feeds an auto one. The
-// tool_call event is emitted here rather than in consume/step because
-// auto_re_feed isn't known until the call is matched against the mode's tools.
+// handleCall persists the turn and call row (result NULL), then either stops
+// for the client to resolve a non-auto call or executes and re-feeds an auto
+// one. tool_call is emitted here, not in consume, because auto_re_feed isn't
+// known until the call is matched against the mode's tools.
 func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res streamResult, out chan<- Event) (llm.Request, bool) {
 	call := res.call
 	auto := m.AutoReFeed(call.Name)
@@ -43,12 +42,9 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 	})
 
 	if !auto {
-		// Hand the call back to the client; the loop must not spin waiting.
-		return llm.Request{}, false
+		return llm.Request{}, false // client resolves it; the loop must not spin
 	}
 
-	// Client-sourced and loop-sourced tool results travel this same Request
-	// shape — only the origin of the output differs.
 	output, execErr := m.Execute(call.Name, call.Arguments)
 	if execErr != nil {
 		output = execErr.Error()

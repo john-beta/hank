@@ -10,9 +10,8 @@ import (
 // maxIterations bounds the loop so a misbehaving model cannot spin forever.
 const maxIterations = 10
 
-// runLoop drives the bounded ReAct retry loop for a fixed mode. runStep emits
-// every terminal event (done, tool_call, error) itself before reporting
-// cont=false, so runLoop's only job past that point is to stop.
+// runLoop drives the bounded ReAct loop. runStep emits its own terminal events
+// before reporting cont=false, so runLoop's only job then is to stop.
 func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) {
 	for i := 0; i < maxIterations; i++ {
 		next, cont := a.runStep(ctx, state, m, req, out)
