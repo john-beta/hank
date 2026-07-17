@@ -2,16 +2,18 @@ package llm
 
 import (
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/openai/openai-go/v3/responses"
 )
 
 // buildParams maps ToolResults to OpenAI's function_call_output input items
 // re-fed against the previous response; otherwise Input is sent as plain text.
+// The stored Prompt supplies instructions, tools, model, etc.
 func buildParams(req Request) responses.ResponseNewParams {
+	prompt := responses.ResponsePromptParam{ID: req.Prompt.ID, Version: param.Opt[string]{Value: req.Prompt.Version}}
+
 	params := responses.ResponseNewParams{
-		Model:             openai.ChatModelGPT4o,
-		Instructions:      openai.String(req.Instructions),
-		Tools:             mapTools(req.Tools),
+		Prompt:            prompt,
 		ParallelToolCalls: openai.Bool(false),
 	}
 
@@ -37,23 +39,4 @@ func buildParams(req Request) responses.ResponseNewParams {
 	}
 
 	return params
-}
-
-func mapTools(defs []ToolDef) []responses.ToolUnionParam {
-	if len(defs) == 0 {
-		return nil
-	}
-	tools := make([]responses.ToolUnionParam, 0, len(defs))
-	for _, d := range defs {
-		// AutoReFeed is intentionally not copied: it's agent metadata, not part
-		// of the OpenAI tool definition.
-		tools = append(tools, responses.ToolUnionParam{
-			OfFunction: &responses.FunctionToolParam{
-				Name:        d.Name,
-				Description: openai.String(d.Description),
-				Parameters:  d.Parameters,
-			},
-		})
-	}
-	return tools
 }

@@ -2,20 +2,13 @@ package planning
 
 import (
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
+	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
 func New() mode.Mode {
 	return mode.Mode{
-		Instructions: instructions,
-		Tools:        tools,
-		Execute:      execute,
-		AutoReFeed: func(name string) bool {
-			for _, t := range tools {
-				if t.Name == name {
-					return t.AutoReFeed
-				}
-			}
-			return false
-		},
+		Prompt:     llm.Prompt{ID: promptID, Version: promptVersion},
+		Execute:    execute,
+		AutoReFeed: func(name string) bool { return autoReFeed[name] },
 	}
 }

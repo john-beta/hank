@@ -5,21 +5,18 @@ import "context"
 // Request carries no OpenAI SDK types, so the agent never depends on the SDK.
 type Request struct {
 	Input          string
-	Instructions   string
-	Tools          []ToolDef
+	Prompt         Prompt
 	PrevResponseID string
 	// ToolResults, when non-empty, re-feeds tool outputs for a follow-up turn
 	// instead of sending fresh user input.
 	ToolResults []ToolResult
 }
 
-// ToolDef describes a function tool. AutoReFeed is agent metadata, not part of
-// the OpenAI tool definition — it's stripped before reaching the SDK (mapTools).
-type ToolDef struct {
-	Name        string
-	Description string
-	Parameters  map[string]any
-	AutoReFeed  bool
+// Prompt references a stored OpenAI prompt (defined in the dashboard: system
+// instructions, tools, model, reasoning). Version is optional; empty omits it.
+type Prompt struct {
+	ID      string
+	Version string
 }
 
 type ToolResult struct {

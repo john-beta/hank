@@ -27,11 +27,10 @@ func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.
 }
 
 // runStep runs one model response and either ends the turn or hands an auto
-// call off to handleCall. Instructions/Tools are re-set every Step because
-// OpenAI's PreviousResponseID does not carry them forward.
+// call off to handleCall. The Prompt is re-set every Step because OpenAI's
+// PreviousResponseID does not carry it forward.
 func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
-	req.Instructions = m.Instructions
-	req.Tools = m.Tools
+	req.Prompt = m.Prompt
 
 	streamCh, err := a.llm.Stream(ctx, req)
 	if a.fail(ctx, out, err) {
