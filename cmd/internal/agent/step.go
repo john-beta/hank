@@ -21,9 +21,8 @@ import (
 // auto_re_feed tool calls chain the model into further responses without the
 // client's involvement.
 func (a *Agent) runStep(ctx context.Context, state *State, m mode.Interface, req llm.Request, out chan<- Event) (llm.Request, bool) {
-	tools := m.Tools()
 	req.Instructions = m.Instructions()
-	req.Tools = tools
+	req.Tools = m.Tools()
 
 	streamCh, err := a.llm.Stream(ctx, req)
 	if a.fail(ctx, out, err) {
@@ -38,14 +37,14 @@ func (a *Agent) runStep(ctx context.Context, state *State, m mode.Interface, req
 
 	// No call: the model answered with text. Persist the agent turn and end.
 	if res.call == nil {
-		if _, err := a.saveAgentTurn(ctx, state.SessionID, res.responseID, res.text); a.fail(ctx, out, err) {
+		if _, err := a.saveAgentTurn(ctx, state, res); a.fail(ctx, out, err) {
 			return llm.Request{}, false
 		}
 		a.emit(ctx, out, Event{Type: EventDone, ResponseID: res.responseID})
 		return llm.Request{}, false
 	}
 
-	return a.handleCall(ctx, state, m, tools, res, out)
+	return a.handleCall(ctx, state, m, res, out)
 }
 
 // streamResult is the outcome of consuming one model response: the single
@@ -93,13 +92,14 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 }
 
 // saveAgentTurn persists one agent turn produced in the loop: its streamed text
-// (output_text) and response ID. It returns the generated turn_id so a call
-// emitted in that same response can be linked to it.
-func (a *Agent) saveAgentTurn(ctx context.Context, sessionID, responseID, outputText string) (string, error) {
-	respID := responseID
-	text := outputText
+// (output_text) and response ID, read off state/res so callers never have to
+// re-derive or repeat them. It returns the generated turn_id so a call emitted
+// in that same response can be linked to it.
+func (a *Agent) saveAgentTurn(ctx context.Context, state *State, res streamResult) (string, error) {
+	respID := res.responseID
+	text := res.text
 	return a.store.SaveTurn(ctx, store.Turn{
-		SessionID:  sessionID,
+		SessionID:  state.SessionID,
 		Role:       "agent",
 		OutputText: &text,
 		ResponseID: &respID,

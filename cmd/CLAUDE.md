@@ -100,7 +100,7 @@ Does not know what the modes do internally — it talks to them only through the
 
 These are not 1:1. A single client-visible turn can persist *several* `store.Turn` rows, because the ReAct loop can chain the model into further responses without ever going back to the client: whenever a tool call has `auto_re_feed = true`, `runStep`/`handleCall` execute it, feed the result back to the model automatically, and loop again — each pass is a **Step** (`runStep`, bounded by `maxIterations`), and each Step persists its own `store.Turn` via `saveAgentTurn`. The loop only returns control to the client when the model produces final text, or emits a tool call with `auto_re_feed = false`. So: **Turn = one persisted row. Step = one loop iteration that produces a Turn. One client-visible request can drive many Steps, hence many Turns.**
 
-**`auto_re_feed` drives the loop.** Each tool declares a static `AutoReFeed` bool. When the model emits a call, `handleCall` looks it up (`mode.AutoReFeed`): `true` → execute the tool, record the result, and re-feed automatically (the loop takes another Step); `false` → emit the enriched `tool_call` SSE event (with `call_id` + `auto_re_feed`) and stop the turn so the client resolves it and sends the result back in the next request. Client-sourced tool results and loop-sourced auto results travel the exact same `llm.Request{ToolResults, PrevResponseID}` path — one Request type, two sources.
+**`auto_re_feed` drives the loop.** Each tool declares a static `AutoReFeed` bool. When the model emits a call, `handleCall` looks it up via `m.AutoReFeed(name)` — a method on `mode.Interface` that each mode implements by scanning its own `Tools()`: `true` → execute the tool, record the result, and re-feed automatically (the loop takes another Step); `false` → emit the enriched `tool_call` SSE event (with `call_id` + `auto_re_feed`) and stop the turn so the client resolves it and sends the result back in the next request. Client-sourced tool results and loop-sourced auto results travel the exact same `llm.Request{ToolResults, PrevResponseID}` path — one Request type, two sources.
 
 **One row per call.** A call is INSERTed once (result NULL) when emitted, then UPDATEd in place when it resolves. `PendingCall` finds the single unresolved non-auto call on a session's latest agent turn.
 
@@ -117,10 +117,11 @@ type Interface interface {
     Instructions() string
     Tools() []llm.ToolDef
     Execute(name, args string) (string, error)
+    AutoReFeed(name string) bool
 }
 ```
 
-Every mode implements these three methods. The loop only calls these — it never reaches into mode internals. There is deliberately no transition/`Next` method: mode is derived from `ApprovedProposal`, and the Planning → Executing flip is resolved pre-loop, not on the interface.
+Every mode implements these four methods. `AutoReFeed` is looked up on the mode itself (each implementation scans its own `Tools()`), not via a shared helper that takes a tool slice — this keeps `handleCall`'s signature down to `(ctx, state, m, res, out)` instead of also threading `tools` through separately. The loop only calls these methods — it never reaches into mode internals. There is deliberately no transition/`Next` method: mode is derived from `ApprovedProposal`, and the Planning → Executing flip is resolved pre-loop, not on the interface.
 
 ### Conventions
 

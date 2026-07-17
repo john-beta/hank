@@ -3,26 +3,17 @@ package planning
 import (
 	"fmt"
 
+	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// tools is Planning's tool set: RunExploration (auto-re-fed) and
-// ProposeStructure (not auto-re-fed — the client resolves it, and an approving
-// result is what flips the session into Executing). RunExecution is
-// deliberately absent here; its absence is the mode boundary.
+// tools is Planning's tool set: RunExploration (auto-re-fed, shared with
+// Executing — see mode.RunExploration) and ProposeStructure (not auto-re-fed —
+// the client resolves it, and an approving result is what flips the session
+// into Executing). RunExecution is deliberately absent here; its absence is
+// the mode boundary.
 var tools = []llm.ToolDef{
-	{
-		Name:        "RunExploration",
-		Description: "Explore the workspace (not yet implemented).",
-		AutoReFeed:  true,
-		Parameters: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"code": map[string]any{"type": "string"},
-			},
-			"required": []string{"code"},
-		},
-	},
+	mode.RunExploration,
 	{
 		Name:        "ProposeStructure",
 		Description: "Propose a workspace structure (not yet implemented).",

@@ -12,11 +12,11 @@ import (
 // itself (result NULL), emits the tool_call event now that auto_re_feed is
 // known, and either stops the turn for the client to resolve a non-auto call,
 // or executes the (stub) tool and re-feeds its result for an auto one.
-func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Interface, tools []llm.ToolDef, res streamResult, out chan<- Event) (llm.Request, bool) {
+func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Interface, res streamResult, out chan<- Event) (llm.Request, bool) {
 	call := res.call
-	auto := mode.AutoReFeed(tools, call.Name)
+	auto := m.AutoReFeed(call.Name)
 
-	turnID, err := a.saveAgentTurn(ctx, state.SessionID, res.responseID, res.text)
+	turnID, err := a.saveAgentTurn(ctx, state, res)
 	if a.fail(ctx, out, err) {
 		return llm.Request{}, false
 	}
