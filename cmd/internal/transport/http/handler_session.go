@@ -5,9 +5,7 @@ import (
 	"net/http"
 )
 
-// CreateSession handles POST /api/sessions. It reads the workspace root_dir,
-// creates a new session directly in the store (no LLM involvement), and returns
-// its ID as JSON.
+// CreateSession creates the session directly in the store — no LLM involvement.
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	var req CreateSessionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

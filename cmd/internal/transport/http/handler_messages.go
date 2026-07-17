@@ -7,12 +7,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/agent"
 )
 
-// PostMessage handles POST /api/messages. It decodes the request into one of the
-// two turn-input shapes, delegates to the agent, and streams the resulting
-// events as SSE. Passing r.Context() to the agent is what wires client
-// disconnects to loop/stream cancellation: when the client goes away the context
-// cancels, the agent loop and LLM stream unwind, and the events channel closes,
-// ending this handler.
+// Passing r.Context() wires client disconnects to cancellation: the context
+// cancels, the agent loop and LLM stream unwind, the events channel closes.
 func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -38,9 +34,6 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// toTurnInput translates the parsed request DTO into the agent's discriminated
-// TurnInput. Translation only — no business logic, no mode awareness. The
-// tool-result payload is passed through verbatim as a JSON string.
 func toTurnInput(req SendMessageRequest) (agent.TurnInput, error) {
 	switch {
 	case req.ToolResult != nil:

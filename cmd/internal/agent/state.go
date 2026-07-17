@@ -4,10 +4,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// State carries conversation state for a single turn. It is built fresh from the
-// store at the start of each request and never held on the Agent. The operating
-// mode is NOT stored here — it is derived from ApprovedProposal by mode.Resolve
-// once, before the loop.
+// State is per-request conversation state, built fresh from the store each
+// request. ApprovedProposal is never persisted — see prepareToolResultRequest.
 type State struct {
 	SessionID        string
 	RootDir          string
@@ -15,13 +13,12 @@ type State struct {
 	PrevResponseID   string
 }
 
-// StateFromStore builds the per-turn State from a persisted session and its last
-// agent turn (if any). A nil lastAgentTurn means this is the first turn.
+// StateFromStore starts ApprovedProposal false (the store has no such column).
+// A nil lastAgentTurn means the session's first turn.
 func StateFromStore(s store.Session, lastAgentTurn *store.Turn) *State {
 	st := &State{
-		SessionID:        s.SessionID,
-		RootDir:          s.RootDir,
-		ApprovedProposal: s.ApprovedProposal,
+		SessionID: s.SessionID,
+		RootDir:   s.RootDir,
 	}
 	if lastAgentTurn != nil && lastAgentTurn.ResponseID != nil {
 		st.PrevResponseID = *lastAgentTurn.ResponseID

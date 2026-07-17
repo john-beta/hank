@@ -4,128 +4,66 @@ import (
 	"context"
 	"strings"
 
-	"github.com/john-beta/hank/cmd/internal/agent/modes"
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 	"github.com/john-beta/hank/cmd/internal/llm"
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// maxIterations bounds the ReAct loop so a misbehaving model cannot spin forever.
+// maxIterations bounds the loop so a misbehaving model cannot spin forever.
 const maxIterations = 10
 
-// runLoop drives the ReAct loop for a fixed mode. ParallelToolCalls is off, so
-// each model response yields at most one function call. Per iteration it streams
-// a turn, persists the resulting agent turn, and then:
-//   - no call        -> the model produced final text; emit done and return.
-//   - one auto call  -> execute the stub, record its result, re-feed, continue.
-//   - one non-auto   -> emit the enriched tool_call event and stop the turn; the
-//     client resolves it in the next request.
-//
-// The initial req is supplied by run (either fresh input or a client tool
-// result). Instructions and Tools are re-read from the mode fresh every
-// iteration and never inherited. The output channel is owned and closed by run.
-func (a *Agent) runLoop(ctx context.Context, state *State, modeID mode.ID, req llm.Request, out chan<- Event) {
-	m := modes.Get(modeID)
-
+// runLoop drives the bounded ReAct loop. runStep emits its own terminal events
+// before reporting cont=false, so runLoop's only job then is to stop.
+func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) {
 	for i := 0; i < maxIterations; i++ {
-		req.Instructions = m.Instructions()
-		req.Tools = m.Tools()
-
-		streamCh, err := a.llm.Stream(ctx, req)
-		if err != nil {
-			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+		next, cont := a.runStep(ctx, state, m, req, out)
+		if !cont {
 			return
 		}
-
-		res, ok := a.consume(ctx, out, streamCh)
-		if !ok {
-			return // ctx cancelled or a stream error was already emitted
-		}
-		state.PrevResponseID = res.responseID
-
-		// No call: the model answered with text. Persist the agent turn and end.
-		if res.call == nil {
-			if _, err := a.saveAgentTurn(ctx, state.SessionID, res.responseID, res.text); err != nil {
-				a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
-				return
-			}
-			a.emit(ctx, out, Event{Type: EventDone, ResponseID: res.responseID})
-			return
-		}
-
-		// One call. Persist the agent turn that produced it, then INSERT the call
-		// row (result NULL) linked to that turn.
-		call := res.call
-		auto := mode.AutoReFeed(m.Tools(), call.Name)
-
-		turnID, err := a.saveAgentTurn(ctx, state.SessionID, res.responseID, res.text)
-		if err != nil {
-			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
-			return
-		}
-		args := call.Arguments
-		if err := a.store.SaveCall(ctx, store.Call{
-			CallID:     call.CallID,
-			TurnID:     turnID,
-			Name:       call.Name,
-			Args:       &args,
-			AutoReFeed: auto,
-		}); err != nil {
-			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
-			return
-		}
-
-		// The tool_call event carries auto_re_feed now that it is known.
-		autoVal := auto
-		a.emit(ctx, out, Event{
-			Type:       EventToolCall,
-			ToolName:   call.Name,
-			ToolArgs:   call.Arguments,
-			CallID:     call.CallID,
-			AutoReFeed: &autoVal,
-		})
-
-		if !auto {
-			// Hand the call back to the client; the loop must not spin waiting.
-			return
-		}
-
-		// Auto: execute the (stub) tool, record its result, and re-feed. The
-		// client's tool result travels this same Request shape — only the origin
-		// of the output differs.
-		output, execErr := m.Execute(call.Name, call.Arguments)
-		if execErr != nil {
-			output = execErr.Error()
-		}
-		if err := a.store.UpdateCallResult(ctx, call.CallID, output); err != nil {
-			a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
-			return
-		}
-		a.emit(ctx, out, Event{Type: EventToolResult, ToolName: call.Name, ToolResult: output})
-
-		req = llm.Request{
-			ToolResults:    []llm.ToolResult{{CallID: call.CallID, Output: output}},
-			PrevResponseID: res.responseID,
-		}
+		req = next
 	}
 
 	a.emit(ctx, out, Event{Type: EventError, Error: "max iterations reached"})
 }
 
-// streamResult is the outcome of consuming one model response: the single
-// assembled function call (nil if the model produced only text), the response
-// ID, and the concatenated streamed text.
+// runStep runs one model response and either ends the turn or hands an auto
+// call off to handleCall. Instructions/Tools are re-set every Step because
+// OpenAI's PreviousResponseID does not carry them forward.
+func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
+	req.Instructions = m.Instructions
+	req.Tools = m.Tools
+
+	streamCh, err := a.llm.Stream(ctx, req)
+	if a.fail(ctx, out, err) {
+		return llm.Request{}, false
+	}
+
+	res, ok := a.consume(ctx, out, streamCh)
+	if !ok {
+		return llm.Request{}, false // ctx cancelled or a stream error was already emitted
+	}
+	state.PrevResponseID = res.responseID
+
+	if res.call == nil {
+		if _, err := a.saveAgentTurn(ctx, state, res); a.fail(ctx, out, err) {
+			return llm.Request{}, false
+		}
+		a.emit(ctx, out, Event{Type: EventDone, ResponseID: res.responseID})
+		return llm.Request{}, false
+	}
+
+	return a.handleCall(ctx, state, m, res, out)
+}
+
 type streamResult struct {
 	call       *llm.FunctionCallData
 	responseID string
 	text       string
 }
 
-// consume drains one stream, forwarding cosmetic text deltas and accumulating
-// the streamed text, the single function call (ParallelToolCalls is off), and
-// the response ID. It does not emit the tool_call event — that happens in the
-// loop once auto_re_feed is known. It returns ok=false if ctx was cancelled or a
-// stream error was emitted (both meaning the loop should stop).
+// consume drains one stream: forwards text deltas, accumulates the single
+// function call (ParallelToolCalls is off, so never more than one), and does
+// not emit tool_call itself — handleCall does, once auto_re_feed is known.
 func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan llm.StreamEvent) (streamResult, bool) {
 	var res streamResult
 	var text strings.Builder
@@ -156,11 +94,65 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 	}
 }
 
-// emit sends an event unless ctx is cancelled first, so the loop goroutine
-// never blocks on an abandoned channel.
-func (a *Agent) emit(ctx context.Context, out chan<- Event, ev Event) {
-	select {
-	case out <- ev:
-	case <-ctx.Done():
+// handleCall persists the turn and call row (result NULL), then either stops
+// for the client to resolve a non-auto call or executes and re-feeds an auto
+// one. tool_call is emitted here, not in consume, because auto_re_feed isn't
+// known until the call is matched against the mode's tools.
+func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res streamResult, out chan<- Event) (llm.Request, bool) {
+	call := res.call
+	auto := m.AutoReFeed(call.Name)
+
+	turnID, err := a.saveAgentTurn(ctx, state, res)
+	if a.fail(ctx, out, err) {
+		return llm.Request{}, false
 	}
+
+	args := call.Arguments
+	if err := a.store.SaveCall(ctx, store.Call{
+		CallID:     call.CallID,
+		TurnID:     turnID,
+		Name:       call.Name,
+		Args:       &args,
+		AutoReFeed: auto,
+	}); a.fail(ctx, out, err) {
+		return llm.Request{}, false
+	}
+
+	autoVal := auto
+	a.emit(ctx, out, Event{
+		Type:       EventToolCall,
+		ToolName:   call.Name,
+		ToolArgs:   call.Arguments,
+		CallID:     call.CallID,
+		AutoReFeed: &autoVal,
+	})
+
+	if !auto {
+		return llm.Request{}, false // client resolves it; the loop must not spin
+	}
+
+	output, execErr := m.Execute(call.Name, call.Arguments)
+	if execErr != nil {
+		output = execErr.Error()
+	}
+	if err := a.store.UpdateCallResult(ctx, call.CallID, output); a.fail(ctx, out, err) {
+		return llm.Request{}, false
+	}
+	a.emit(ctx, out, Event{Type: EventToolResult, ToolName: call.Name, ToolResult: output})
+
+	return llm.Request{
+		ToolResults:    []llm.ToolResult{{CallID: call.CallID, Output: output}},
+		PrevResponseID: res.responseID,
+	}, true
+}
+
+func (a *Agent) saveAgentTurn(ctx context.Context, state *State, res streamResult) (string, error) {
+	respID := res.responseID
+	text := res.text
+	return a.store.SaveTurn(ctx, store.Turn{
+		SessionID:  state.SessionID,
+		Role:       "agent",
+		OutputText: &text,
+		ResponseID: &respID,
+	})
 }
