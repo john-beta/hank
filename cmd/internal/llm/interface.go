@@ -2,22 +2,19 @@ package llm
 
 import "context"
 
-// Request carries no OpenAI SDK types, so callers (the agent) never depend on
-// the SDK directly.
+// Request carries no OpenAI SDK types, so the agent never depends on the SDK.
 type Request struct {
 	Input          string
 	Instructions   string
 	Tools          []ToolDef
 	PrevResponseID string
-	Temperature    float64
 	// ToolResults, when non-empty, re-feeds tool outputs for a follow-up turn
 	// instead of sending fresh user input.
 	ToolResults []ToolResult
 }
 
-// ToolDef describes a function tool the model may call. AutoReFeed is
-// agent-domain metadata, not part of the OpenAI tool definition — it's
-// stripped before the request reaches the SDK (see buildParams).
+// ToolDef describes a function tool. AutoReFeed is agent metadata, not part of
+// the OpenAI tool definition — it's stripped before reaching the SDK (mapTools).
 type ToolDef struct {
 	Name        string
 	Description string
@@ -37,8 +34,7 @@ type StreamEvent struct {
 	ResponseID   string
 }
 
-// FunctionCallData is a fully-assembled function call, emitted once its
-// arguments have finished streaming.
+// FunctionCallData is a function call assembled once its arguments finish streaming.
 type FunctionCallData struct {
 	CallID    string
 	Name      string

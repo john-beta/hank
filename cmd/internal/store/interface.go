@@ -5,19 +5,17 @@ import (
 	"time"
 )
 
-// Session is a conversation thread bound to a workspace. The operating mode
-// (Planning/Executing) is not part of it — that's computed per request in the
-// agent layer, never persisted here.
+// Session is a conversation thread bound to a workspace. The mode
+// (Planning/Executing) is not part of it — it's computed per request, never persisted.
 type Session struct {
 	SessionID string
 	RootDir   string
 	CreatedAt time.Time
 }
 
-// Turn is a single exchange within a session. See migrations.go for
-// output_text semantics: a user's message or an agent's streamed text, nil
-// for a user turn that carries a tool result (whose payload lands via
-// call.result instead).
+// Turn is a single exchange within a session. OutputText is the user's message
+// or the agent's streamed text, nil for a tool-result user turn (whose payload
+// lives in call.result). See migrations.go.
 type Turn struct {
 	TurnID     string
 	SessionID  string
@@ -27,8 +25,8 @@ type Turn struct {
 	CreatedAt  time.Time
 }
 
-// Call is one tool call emitted by the agent. Exactly one row exists per
-// CallID: inserted with Result nil, updated in place when the tool resolves.
+// Call is one tool call: exactly one row per CallID, inserted with Result nil
+// and updated in place when the tool resolves.
 type Call struct {
 	CallID     string
 	TurnID     string

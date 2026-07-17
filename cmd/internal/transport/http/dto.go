@@ -7,9 +7,8 @@ import (
 
 var errMissingInput = errors.New("request must contain either input.message or tool_result")
 
-// SendMessageRequest is the JSON body of POST /api/messages. It carries
-// exactly one of two shapes: `input.message` for a plain user message, or
-// `tool_result` for the client resolving a pending non-auto call.
+// SendMessageRequest is the POST /api/messages body: exactly one of
+// `input.message` (plain user message) or `tool_result` (client resolving a call).
 type SendMessageRequest struct {
 	SessionID string `json:"session_id"`
 	Input     *struct {

@@ -15,9 +15,6 @@ func buildParams(req Request) responses.ResponseNewParams {
 		ParallelToolCalls: openai.Bool(false),
 	}
 
-	if req.Temperature > 0 {
-		params.Temperature = openai.Float(req.Temperature)
-	}
 	if req.PrevResponseID != "" {
 		params.PreviousResponseID = openai.String(req.PrevResponseID)
 	}
@@ -48,8 +45,8 @@ func mapTools(defs []ToolDef) []responses.ToolUnionParam {
 	}
 	tools := make([]responses.ToolUnionParam, 0, len(defs))
 	for _, d := range defs {
-		// AutoReFeed is intentionally not copied here: it is agent metadata,
-		// not part of the OpenAI tool definition.
+		// AutoReFeed is intentionally not copied: it's agent metadata, not part
+		// of the OpenAI tool definition.
 		tools = append(tools, responses.ToolUnionParam{
 			OfFunction: &responses.FunctionToolParam{
 				Name:        d.Name,

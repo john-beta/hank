@@ -8,8 +8,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// SaveCall inserts a call row with result NULL. It is the INSERT half of the
-// one-row-per-call_id lifecycle; UpdateCallResult is the UPDATE half.
+// SaveCall inserts a call row with result NULL — the INSERT half of the
+// one-row-per-call_id lifecycle (UpdateCallResult is the UPDATE half).
 func (s *SQLiteStore) SaveCall(ctx context.Context, c store.Call) error {
 	const q = `INSERT INTO call (call_id, turn_id, name, args, result, auto_re_feed)
 	           VALUES (?, ?, ?, ?, NULL, ?)`
@@ -28,8 +28,8 @@ func (s *SQLiteStore) UpdateCallResult(ctx context.Context, callID string, resul
 	return nil
 }
 
-// PendingCall returns the single unresolved, non-auto call attached to the
-// session's latest agent turn, or nil, nil if none is outstanding.
+// PendingCall returns the single unresolved, non-auto call on the session's
+// latest agent turn, or nil, nil if none is outstanding.
 func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store.Call, error) {
 	const q = `SELECT call_id, turn_id, name, args, result, auto_re_feed
 	           FROM call
@@ -56,7 +56,6 @@ func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store
 	return &c, nil
 }
 
-// boolToInt maps a Go bool to the 0/1 integer SQLite stores for BOOL columns.
 func boolToInt(b bool) int {
 	if b {
 		return 1
