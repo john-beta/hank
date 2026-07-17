@@ -14,11 +14,8 @@ type SQLiteStore struct {
 	db *sql.DB
 }
 
-// compile-time check that SQLiteStore satisfies the Store interface.
 var _ store.Store = (*SQLiteStore)(nil)
 
-// NewSQLite opens (creating if needed) the database at path, verifies the
-// connection, and runs migrations.
 func NewSQLite(path string) (*SQLiteStore, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -35,7 +32,6 @@ func NewSQLite(path string) (*SQLiteStore, error) {
 	return &SQLiteStore{db: db}, nil
 }
 
-// Close releases the underlying connection pool.
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }

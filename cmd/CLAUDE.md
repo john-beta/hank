@@ -80,9 +80,9 @@ transport/http  →  agent  →  llm
 - `step.go` — `runStep`, one full model-response cycle (stream → consume → persist), plus `consume`/`streamResult` (draining one stream) and `saveAgentTurn` (persisting the agent's turn produced by a step).
 - `call.go` — `handleCall`, everything that happens once a step's response includes a tool call: persist it, emit `tool_call`, and either stop (non-auto, client resolves it) or execute-and-re-feed (auto).
 
-Does not know what the modes do internally — it talks to them only through the shared mode interface.
+Does not know what the modes do internally — it talks to them only through the shared `mode.Mode` value.
 
-**`modes`** — Business logic. Each mode is a self-contained unit implementing the shared mode interface (`mode.Interface`, in the `mode` subpackage). A mode bundles: instructions (system prompt), tool definitions (what the LLM can call), and tool execution (what happens when the LLM calls a tool). Each mode lives in its own subpackage (`planning/`, `executing/`) with its own files for instructions, tools, and execution. There are exactly two modes and that is fixed for the scope of this project, so there is no registry/lookup-by-ID layer: `agent.resolveMode(approvedProposal)` (in `agent.go`) just constructs `executing.Mode{}` or `planning.Mode{}` directly and returns it as `mode.Interface`. The active mode is **derived, never persisted** — computed once per request. There is no transition/`Next` method: the Planning → Executing move is a one-way boolean flip, resolved pre-loop.
+**`modes`** — Business logic. Each mode is a value of the shared `mode.Mode` struct (in the `mode` subpackage) — a bag of values, not an interface implemented by an empty struct: `Instructions string`, `Tools []llm.ToolDef`, `Execute func(name, args string) (string, error)`, `AutoReFeed func(name string) bool`. A mode has no behavior of its own beyond those four fields, so there is nothing for method-forwarding boilerplate to buy. Each mode lives in its own subpackage (`planning/`, `executing/`) with its own files for instructions and tools, plus a `mode.go` whose only job is a `New() mode.Mode` constructor that assembles the struct (closing over the package's own `tools` for `AutoReFeed`). There are exactly two modes and that is fixed for the scope of this project, so there is no registry/lookup-by-ID layer: `agent.resolveMode(approvedProposal)` (in `agent.go`) just calls `executing.New()` or `planning.New()` directly with a plain `if`/`else`. The active mode is **derived, never persisted** — computed once per request. There is no transition/`Next` field: the Planning → Executing move is a one-way boolean flip, resolved pre-loop.
 
 **`llm`** — OpenAI adapter. Wraps the SDK behind a `Client` interface. Translates between agent-level types (`Request`, `StreamEvent`) and SDK types (`ResponseNewParams`, stream events). Sets `ParallelToolCalls: false` (one function call per response). The only package that imports `github.com/openai/openai-go/v3`. `ToolDef.AutoReFeed` is agent metadata and is stripped here — it never reaches OpenAI.
 
@@ -90,7 +90,7 @@ Does not know what the modes do internally — it talks to them only through the
 
 ### Key patterns
 
-**Mode-driven turns.** At the start of a request the mode is resolved once from `State.ApprovedProposal` via `agent.resolveMode`, then held fixed for the whole loop. The loop reads `Instructions()` and `Tools()` from it fresh on every iteration. Instructions and tools are NOT inherited between turns — they are explicitly re-sent each time. This prevents hallucination from stale context and enables each mode to fully control what the model sees.
+**Mode-driven turns.** At the start of a request the mode is resolved once from `State.ApprovedProposal` via `agent.resolveMode`, then held fixed for the whole loop. The loop reads `m.Instructions` and `m.Tools` fresh on every iteration (plain field reads, not method calls — see "Mode interface contract" below). Instructions and tools are NOT inherited between turns — they are explicitly re-sent each time. This prevents hallucination from stale context and enables each mode to fully control what the model sees.
 
 `ApprovedProposal` is computed, not read: `StateFromStore` always starts it at `false` (the store has no such column), and `prepareToolResultRequest` (in `input.go`) flips it to `true` in memory, for the rest of the current request only, when the incoming tool result carries `"approved": true`. Nothing is written back to the store. This means the flip does **not** survive past the request it happened in — the very next request starts back at Planning unless that request's own tool result approves again. This is a deliberate simplification of the scaffold, not a bug: see [Database](#database).
 
@@ -100,7 +100,7 @@ Does not know what the modes do internally — it talks to them only through the
 
 These are not 1:1. A single client-visible turn can persist *several* `store.Turn` rows, because the ReAct loop can chain the model into further responses without ever going back to the client: whenever a tool call has `auto_re_feed = true`, `runStep`/`handleCall` execute it, feed the result back to the model automatically, and loop again — each pass is a **Step** (`runStep`, bounded by `maxIterations`), and each Step persists its own `store.Turn` via `saveAgentTurn`. The loop only returns control to the client when the model produces final text, or emits a tool call with `auto_re_feed = false`. So: **Turn = one persisted row. Step = one loop iteration that produces a Turn. One client-visible request can drive many Steps, hence many Turns.**
 
-**`auto_re_feed` drives the loop.** Each tool declares a static `AutoReFeed` bool. When the model emits a call, `handleCall` looks it up via `m.AutoReFeed(name)` — a method on `mode.Interface` that each mode implements by scanning its own `Tools()`: `true` → execute the tool, record the result, and re-feed automatically (the loop takes another Step); `false` → emit the enriched `tool_call` SSE event (with `call_id` + `auto_re_feed`) and stop the turn so the client resolves it and sends the result back in the next request. Client-sourced tool results and loop-sourced auto results travel the exact same `llm.Request{ToolResults, PrevResponseID}` path — one Request type, two sources.
+**`auto_re_feed` drives the loop.** Each tool declares a static `AutoReFeed` bool. When the model emits a call, `handleCall` looks it up via `m.AutoReFeed(name)` — a closure field on `mode.Mode` that each mode's `New()` builds by closing over its own `tools`: `true` → execute the tool, record the result, and re-feed automatically (the loop takes another Step); `false` → emit the enriched `tool_call` SSE event (with `call_id` + `auto_re_feed`) and stop the turn so the client resolves it and sends the result back in the next request. Client-sourced tool results and loop-sourced auto results travel the exact same `llm.Request{ToolResults, PrevResponseID}` path — one Request type, two sources.
 
 **One row per call.** A call is INSERTed once (result NULL) when emitted, then UPDATEd in place when it resolves. `PendingCall` finds the single unresolved non-auto call on a session's latest agent turn.
 
@@ -113,15 +113,15 @@ These are not 1:1. A single client-visible turn can persist *several* `store.Tur
 **Mode interface contract:**
 
 ```go
-type Interface interface {
-    Instructions() string
-    Tools() []llm.ToolDef
-    Execute(name, args string) (string, error)
-    AutoReFeed(name string) bool
+type Mode struct {
+    Instructions string
+    Tools        []llm.ToolDef
+    Execute      func(name, args string) (string, error)
+    AutoReFeed   func(name string) bool
 }
 ```
 
-Every mode implements these four methods. `AutoReFeed` is looked up on the mode itself (each implementation scans its own `Tools()`), not via a shared helper that takes a tool slice — this keeps `handleCall`'s signature down to `(ctx, state, m, res, out)` instead of also threading `tools` through separately. The loop only calls these methods — it never reaches into mode internals. There is deliberately no transition/`Next` method: mode is derived from `ApprovedProposal`, and the Planning → Executing flip is resolved pre-loop, not on the interface.
+`Mode` is a plain struct of values, not an interface satisfied by an empty struct — a mode has no behavior beyond a string, a slice, and two closures, so there was nothing for method-forwarding boilerplate (`func (Mode) Instructions() string { return instructions }` etc., previously repeated once per mode) to buy. `planning.New()` / `executing.New()` each build one, closing `AutoReFeed` over their own `tools` — repeated per mode on purpose, since each mode owns its own tool set and there's no shared `tools` to factor the loop out of. Because `Instructions`/`Tools` are fields, call sites read them (`m.Instructions`, `m.Tools`, no parens); `Execute`/`AutoReFeed` are still called like methods since they're func-valued fields (`m.Execute(name, args)`, `m.AutoReFeed(name)` — identical call syntax to a method). The loop only ever touches these four fields — it never reaches into mode internals. There is deliberately no transition/`Next` field: mode is derived from `ApprovedProposal`, and the Planning → Executing flip is resolved pre-loop (`agent.resolveMode`), not a step on this type.
 
 ### Conventions
 
@@ -170,8 +170,8 @@ go mod tidy
 
 ## Modes (Planning & Executing)
 
-There are exactly two modes; the model is *while `ApprovedProposal` is false the agent plans; once it is true the agent executes*. Each mode lives in `internal/agent/modes/<name>/` with three files — `mode.go`, `instructions.go`, `tools.go` — and implements the mode interface (`var _ mode.Interface = Mode{}` for a compile-time check). Since there are exactly two, `agent.resolveMode` in `agent.go` picks the implementation directly with an `if`/`else` on `ApprovedProposal` — no registry, no `ID` type, no lookup-by-name indirection.
+There are exactly two modes; the model is *while `ApprovedProposal` is false the agent plans; once it is true the agent executes*. Each mode lives in `internal/agent/modes/<name>/` with three files — `mode.go`, `instructions.go`, `tools.go` — where `mode.go`'s only job is a `New() mode.Mode` constructor that assembles the shared `mode.Mode` struct from that package's `instructions`/`tools`/`execute`. Since there are exactly two, `agent.resolveMode` in `agent.go` picks the implementation directly with an `if`/`else` on `ApprovedProposal` (`executing.New()` / `planning.New()`) — no registry, no `ID` type, no lookup-by-name indirection.
 
-The mode boundary is structural: `RunExecution` is present only in Executing's `Tools()` and dispatch; `ProposeStructure` is present only in Planning's. Adding a genuinely new mode would mean a new `ID` constant + `Resolve` branch, but the current design is fixed at two — do not add a third speculatively.
+The mode boundary is structural: `RunExecution` is present only in Executing's `tools`/dispatch; `ProposeStructure` is present only in Planning's. Adding a genuinely new mode would mean a new subpackage with its own `New()` plus a branch in `resolveMode`, but the current design is fixed at two — do not add a third speculatively.
 
 **Scaffold status:** tool handlers are stubs (`"not yet implemented"`) and both instruction strings are empty. The system prompts and tool execution logic are the intended next step, written on top of this scaffold.

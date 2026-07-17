@@ -20,7 +20,6 @@ func (s *SQLiteStore) SaveCall(ctx context.Context, c store.Call) error {
 	return nil
 }
 
-// UpdateCallResult fills in the result of an already-inserted call row.
 func (s *SQLiteStore) UpdateCallResult(ctx context.Context, callID string, result string) error {
 	const q = `UPDATE call SET result = ? WHERE call_id = ?`
 	if _, err := s.db.ExecContext(ctx, q, result, callID); err != nil {

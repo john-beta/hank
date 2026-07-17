@@ -9,8 +9,6 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// CreateSession inserts a new session for the given workspace path and
-// returns it.
 func (s *SQLiteStore) CreateSession(ctx context.Context, rootDir string) (store.Session, error) {
 	sessionID := uuid.NewString()
 	const q = `INSERT INTO session (session_id, root_dir) VALUES (?, ?)`
@@ -20,7 +18,6 @@ func (s *SQLiteStore) CreateSession(ctx context.Context, rootDir string) (store.
 	return s.GetSession(ctx, sessionID)
 }
 
-// GetSession loads a session by ID.
 func (s *SQLiteStore) GetSession(ctx context.Context, sessionID string) (store.Session, error) {
 	const q = `SELECT session_id, root_dir, created_at FROM session WHERE session_id = ?`
 	var sess store.Session

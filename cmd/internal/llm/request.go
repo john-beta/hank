@@ -5,10 +5,8 @@ import (
 	"github.com/openai/openai-go/v3/responses"
 )
 
-// buildParams translates an agent-level Request into SDK params. When the
-// Request carries tool results, they become function_call_output input items
-// re-fed against the previous response; otherwise the plain Input string is
-// sent as the turn's input.
+// buildParams maps ToolResults to OpenAI's function_call_output input items
+// re-fed against the previous response; otherwise Input is sent as plain text.
 func buildParams(req Request) responses.ResponseNewParams {
 	params := responses.ResponseNewParams{
 		Model:             openai.ChatModelGPT4o,
@@ -44,15 +42,14 @@ func buildParams(req Request) responses.ResponseNewParams {
 	return params
 }
 
-// mapTools converts agent tool definitions into SDK function tool params.
 func mapTools(defs []ToolDef) []responses.ToolUnionParam {
 	if len(defs) == 0 {
 		return nil
 	}
 	tools := make([]responses.ToolUnionParam, 0, len(defs))
 	for _, d := range defs {
-		// AutoReFeed is intentionally not copied here: it is agent metadata, not
-		// part of the OpenAI function tool definition.
+		// AutoReFeed is intentionally not copied here: it is agent metadata,
+		// not part of the OpenAI tool definition.
 		tools = append(tools, responses.ToolUnionParam{
 			OfFunction: &responses.FunctionToolParam{
 				Name:        d.Name,

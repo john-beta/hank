@@ -10,16 +10,13 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// Agent orchestrates the ReAct loop over an LLM client. It is stateless: all
-// conversation state lives in the store and is loaded per request, so a single
-// Agent is safely reused across sessions. It depends only on the llm.Client and
-// store.Store interfaces, never on concrete SDK types.
+// Agent is stateless: all state lives in the store and loads per request, so
+// a single instance is safe to reuse across sessions.
 type Agent struct {
 	llm   llm.Client
 	store store.Store
 }
 
-// New wires an agent with its LLM client and store.
 func New(llmClient llm.Client, st store.Store) *Agent {
 	return &Agent{
 		llm:   llmClient,
@@ -27,19 +24,17 @@ func New(llmClient llm.Client, st store.Store) *Agent {
 	}
 }
 
-// Handle starts a turn for the given input within sessionID and returns a
-// channel of events. The channel is closed when the turn completes or ctx is
-// cancelled.
+// Handle returns a channel of events; it closes when the turn completes or
+// ctx is cancelled.
 func (a *Agent) Handle(ctx context.Context, sessionID string, input TurnInput) <-chan Event {
 	out := make(chan Event)
 	go a.run(ctx, sessionID, input, out)
 	return out
 }
 
-// run is Handle's goroutine body: load session state, build the initial LLM
-// request from input (this is where the possible Planning -> Executing
-// transition happens, before the loop, never inside it), resolve the mode
-// once, then run the loop. It owns the output channel and always closes it.
+// run is Handle's goroutine body. Mode is resolved here, once, before the
+// loop — never inside it — since prepareRequest is the only place
+// ApprovedProposal can flip for this request.
 func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out chan<- Event) {
 	defer close(out)
 
@@ -62,23 +57,17 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 		return // an error event was already emitted
 	}
 
-	// Mode is derived from the (possibly just-flipped) approval boolean, resolved
-	// once and held fixed for the whole loop.
 	m := resolveMode(state.ApprovedProposal)
 
 	a.runLoop(ctx, state, m, req, out)
 }
 
-// resolveMode maps the single domain boolean to a mode implementation: while
-// approvedProposal is false the agent plans; once it is true the agent
-// executes. There are exactly two modes by design (see mode.Interface) — no
-// registry/lookup-by-ID layer needed for that.
-//
-// The flip is one-way for now — there is no Executing -> Planning transition;
-// that is future work.
-func resolveMode(approvedProposal bool) mode.Interface {
+// resolveMode is a plain if/else, not a registry: there are exactly two modes
+// by design (see mode.Mode). The flip is one-way — there is no
+// Executing -> Planning transition.
+func resolveMode(approvedProposal bool) mode.Mode {
 	if approvedProposal {
-		return executing.Mode{}
+		return executing.New()
 	}
-	return planning.Mode{}
+	return planning.New()
 }

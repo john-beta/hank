@@ -8,11 +8,12 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// handleCall persists the agent turn that produced a call and the call row
-// itself (result NULL), emits the tool_call event now that auto_re_feed is
-// known, and either stops the turn for the client to resolve a non-auto call,
-// or executes the (stub) tool and re-feeds its result for an auto one.
-func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Interface, res streamResult, out chan<- Event) (llm.Request, bool) {
+// handleCall runs once a step's response includes a call: it persists the
+// turn and the call row (result NULL), then either stops for the client to
+// resolve a non-auto call, or executes and re-feeds an auto one. The
+// tool_call event is emitted here rather than in consume/step because
+// auto_re_feed isn't known until the call is matched against the mode's tools.
+func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res streamResult, out chan<- Event) (llm.Request, bool) {
 	call := res.call
 	auto := m.AutoReFeed(call.Name)
 
@@ -32,7 +33,6 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Interface, 
 		return llm.Request{}, false
 	}
 
-	// The tool_call event carries auto_re_feed now that it is known.
 	autoVal := auto
 	a.emit(ctx, out, Event{
 		Type:       EventToolCall,
@@ -47,9 +47,8 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Interface, 
 		return llm.Request{}, false
 	}
 
-	// Auto: execute the (stub) tool, record its result, and re-feed. The
-	// client's tool result travels this same Request shape — only the origin
-	// of the output differs.
+	// Client-sourced and loop-sourced tool results travel this same Request
+	// shape — only the origin of the output differs.
 	output, execErr := m.Execute(call.Name, call.Arguments)
 	if execErr != nil {
 		output = execErr.Error()

@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS call (
 );
 `
 
-// RunMigrations creates the session, turn, and call tables if they do not exist.
 func RunMigrations(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err

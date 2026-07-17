@@ -10,7 +10,6 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// SaveTurn inserts a turn, generating and returning its turn_id.
 func (s *SQLiteStore) SaveTurn(ctx context.Context, t store.Turn) (string, error) {
 	const q = `INSERT INTO turn (turn_id, session_id, role, output_text, response_id)
 	           VALUES (?, ?, ?, ?, ?)`

@@ -2,7 +2,6 @@ package agent
 
 import "context"
 
-// EventType enumerates the agent-level events streamed to transports.
 type EventType string
 
 const (
@@ -13,14 +12,10 @@ const (
 	EventError      EventType = "error"
 )
 
-// Event is a single item in the agent's output stream. It is JSON-serialisable
-// for direct emission over SSE.
-//
-// The tool_call event is the only non-cosmetic one: it carries CallID and
-// AutoReFeed, and an AutoReFeed of false signals the client that it must
-// construct and send the next request as a tool result. text_delta and
-// tool_result are cosmetic. AutoReFeed is a *bool so that the meaningful
-// "false" value survives JSON encoding (a plain bool would be omitted).
+// Event is JSON-serialisable for direct emission over SSE. tool_call is the
+// only non-cosmetic type: an AutoReFeed of false signals the client that it
+// must resolve the call itself. AutoReFeed is a *bool, not bool, so the
+// meaningful "false" survives JSON encoding — a plain bool would be omitted.
 type Event struct {
 	Type       EventType `json:"type"`
 	Text       string    `json:"text,omitempty"`
@@ -33,8 +28,8 @@ type Event struct {
 	ResponseID string    `json:"response_id,omitempty"`
 }
 
-// emit sends an event unless ctx is cancelled first, so the loop goroutine
-// never blocks on an abandoned channel.
+// emit sends unless ctx is cancelled first, so the loop goroutine never
+// blocks on an abandoned channel.
 func (a *Agent) emit(ctx context.Context, out chan<- Event, ev Event) {
 	select {
 	case out <- ev:
@@ -42,10 +37,9 @@ func (a *Agent) emit(ctx context.Context, out chan<- Event, ev Event) {
 	}
 }
 
-// fail emits an error event and reports true if err is non-nil, so callers in
-// the ReAct loop can write `if a.fail(ctx, out, err) { return ... }` instead of
-// repeating the emit. Scoped to loop.go/step.go/call.go for now — persist.go
-// keeps its own explicit emit calls.
+// fail emits an error event and reports true if err is non-nil, so callers
+// can write `if a.fail(ctx, out, err) { return ... }`. Used by loop.go,
+// step.go and call.go; input.go keeps its own explicit emit calls instead.
 func (a *Agent) fail(ctx context.Context, out chan<- Event, err error) bool {
 	if err == nil {
 		return false

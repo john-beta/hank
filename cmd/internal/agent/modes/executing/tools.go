@@ -7,11 +7,9 @@ import (
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
-// tools is Executing's tool set: RunExploration (auto-re-fed, shared with
-// Planning — see mode.RunExploration) and RunExecution (auto-re-fed).
-// RunExecution is kept a distinct tool from RunExploration — its presence here
-// and absence from Planning is the mode boundary, even though the two may
-// later share an executor.
+// RunExecution is kept a distinct tool from RunExploration — its presence
+// here and absence from Planning is the mode boundary, even though the two
+// may later share an executor.
 var tools = []llm.ToolDef{
 	mode.RunExploration,
 	{
@@ -28,9 +26,8 @@ var tools = []llm.ToolDef{
 	},
 }
 
-// execute routes Executing's known tool names. The routing seam is wired; each
-// handler body is a stub returning a placeholder until the business logic is
-// written. An unknown name for this mode is an error.
+// execute routes Executing's known tool names. Handler bodies are stubs until
+// the real logic is written; an unknown name is an error.
 func execute(name, args string) (string, error) {
 	switch name {
 	case "RunExploration":

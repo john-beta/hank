@@ -2,31 +2,23 @@ package mode
 
 import "github.com/john-beta/hank/cmd/internal/llm"
 
-// Interface is the contract every mode implements. A mode bundles its system
-// prompt, its tool definitions, its tool execution, and its auto-re-feed
-// lookup behind these four methods. There is deliberately no Next()/transition
-// method: the Planning -> Executing move is a boolean flip resolved before the
-// loop (see agent.resolveMode), not a step on this interface.
-//
-// There are exactly two implementations, planning.Mode and executing.Mode —
-// fixed by the scope of this project. Do not add a registry/lookup-by-ID
-// layer for a third mode speculatively.
-type Interface interface {
-	Instructions() string
-	Tools() []llm.ToolDef
-	Execute(name, args string) (string, error)
-	// AutoReFeed reports whether the named tool should be executed and
-	// re-fed automatically by the loop (true) or handed back to the client
-	// to resolve (false). Each mode implements it by scanning its own
-	// Tools() — see planning.Mode.AutoReFeed / executing.Mode.AutoReFeed.
-	AutoReFeed(name string) bool
+// Mode is a plain struct of values, not an interface satisfied by an empty
+// struct — with no behavior beyond these four fields, there's nothing for
+// method-forwarding boilerplate to buy. planning.New() / executing.New() each
+// build one; agent.resolveMode picks between them with a plain if/else — no
+// registry, since there are exactly two by design.
+type Mode struct {
+	Instructions string
+	Tools        []llm.ToolDef
+	Execute      func(name, args string) (string, error)
+	// AutoReFeed reports whether the named tool executes-and-re-feeds
+	// automatically. Each mode builds it by closing over its own Tools().
+	AutoReFeed func(name string) bool
 }
 
-// RunExploration is the tool definition shared by both modes: exploring the
-// workspace is the same action whether the agent is planning or executing, so
-// its schema is defined once here instead of being copy-pasted into
-// planning/tools.go and executing/tools.go (where it would risk drifting out
-// of sync between the two).
+// RunExploration is shared by both modes — exploring the workspace behaves
+// the same regardless of mode — so its schema lives here once instead of
+// risking drift between planning/tools.go and executing/tools.go.
 var RunExploration = llm.ToolDef{
 	Name:        "RunExploration",
 	Description: "Explore the workspace (not yet implemented).",

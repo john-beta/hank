@@ -13,8 +13,6 @@ type Handler struct {
 	store store.Store
 }
 
-// NewRouter builds the HTTP router: session creation, the SSE messages
-// endpoint, and the static placeholder at the root.
 func NewRouter(ag *agent.Agent, st store.Store) http.Handler {
 	h := &Handler{agent: ag, store: st}
 	mux := http.NewServeMux()
