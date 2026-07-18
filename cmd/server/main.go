@@ -19,7 +19,7 @@ func main() {
 
 	llmClient := llm.NewOpenAIClient(apiKey)
 
-	st, err := store.NewSQLite("agent.db")
+	st, err := store.NewSQLite("hank.db")
 	if err != nil {
 		log.Fatalf("open store: %v", err)
 	}

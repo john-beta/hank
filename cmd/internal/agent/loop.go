@@ -10,7 +10,7 @@ import (
 )
 
 // maxIterations bounds the loop so a misbehaving model cannot spin forever.
-const maxIterations = 10
+const maxIterations = 15
 
 // runLoop drives the bounded ReAct loop. runStep emits its own terminal events
 // before reporting cont=false, so runLoop's only job then is to stop.
@@ -130,9 +130,9 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 		return llm.Request{}, false // client resolves it; the loop must not spin
 	}
 
-	output, execErr := m.Execute(call.Name, call.Arguments)
-	if execErr != nil {
-		output = execErr.Error()
+	output, ctxErr := m.Execute(ctx, call.Name, call.Arguments)
+	if ctxErr != nil {
+		return llm.Request{}, false
 	}
 	if err := a.store.UpdateCallResult(ctx, call.CallID, output); a.fail(ctx, out, err) {
 		return llm.Request{}, false
