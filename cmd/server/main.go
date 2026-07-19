@@ -7,7 +7,7 @@ import (
 
 	"github.com/john-beta/hank/cmd/internal/agent"
 	"github.com/john-beta/hank/cmd/internal/llm"
-	"github.com/john-beta/hank/cmd/internal/store/sqlite"
+	store "github.com/john-beta/hank/cmd/internal/store/sqlite"
 	transport "github.com/john-beta/hank/cmd/internal/transport/http"
 )
 
@@ -19,7 +19,7 @@ func main() {
 
 	llmClient := llm.NewOpenAIClient(apiKey)
 
-	st, err := store.NewSQLite("agent.db")
+	st, err := store.NewSQLite("hank.db")
 	if err != nil {
 		log.Fatalf("open store: %v", err)
 	}

@@ -23,7 +23,7 @@ Description:
 
 Proposes a new workspace structure based on the exploration results.
 
-ONLY use this tool after the exploration is complete.
+Use this tool only after exploration is complete, to propose a new structure — not to describe the current workspace.
 
 Usage:
 
@@ -35,7 +35,14 @@ Usage:
 
 - Every proposal must contain the complete `workspace_entries` array. If the user requests changes, regenerate and resubmit the entire proposal with the requested updates applied.
 
-Example:
+- Since proposal approvals are only valid via this tool, if the user approves a proposal outside of it, you MUST regenerate the last proposal and resubmit it via the tool. Include an explanatory text asking to confirm it officially.
+
+# Safety Protocol
+
+- Every entry MUST have an unique path.
+- If the curation criteria would produce duplicates, explain the conflict to the user with alternatives. Do not propose until the duplication conflict is resolved.
+
+# Example
 
 ```json
 {

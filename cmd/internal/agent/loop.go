@@ -10,7 +10,7 @@ import (
 )
 
 // maxIterations bounds the loop so a misbehaving model cannot spin forever.
-const maxIterations = 10
+const maxIterations = 15
 
 // runLoop drives the bounded ReAct loop. runStep emits its own terminal events
 // before reporting cont=false, so runLoop's only job then is to stop.
@@ -27,11 +27,10 @@ func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.
 }
 
 // runStep runs one model response and either ends the turn or hands an auto
-// call off to handleCall. Instructions/Tools are re-set every Step because
-// OpenAI's PreviousResponseID does not carry them forward.
+// call off to handleCall. The Prompt is re-set every Step because OpenAI's
+// PreviousResponseID does not carry it forward.
 func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
-	req.Instructions = m.Instructions
-	req.Tools = m.Tools
+	req.Prompt = m.Prompt
 
 	streamCh, err := a.llm.Stream(ctx, req)
 	if a.fail(ctx, out, err) {
@@ -131,9 +130,9 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 		return llm.Request{}, false // client resolves it; the loop must not spin
 	}
 
-	output, execErr := m.Execute(call.Name, call.Arguments)
-	if execErr != nil {
-		output = execErr.Error()
+	output, ctxErr := m.Execute(ctx, call.Name, call.Arguments)
+	if ctxErr != nil {
+		return llm.Request{}, false
 	}
 	if err := a.store.UpdateCallResult(ctx, call.CallID, output); a.fail(ctx, out, err) {
 		return llm.Request{}, false
