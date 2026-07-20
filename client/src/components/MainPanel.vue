@@ -11,7 +11,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  'create-session': [chosenFilePath: string]
+  'create-session': [chosenRootDir: string]
 }>()
 </script>
 

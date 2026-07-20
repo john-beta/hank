@@ -11,11 +11,14 @@ import (
 
 func (s *SQLiteStore) CreateSession(ctx context.Context, rootDir string) (store.Session, error) {
 	sessionID := uuid.NewString()
-	const q = `INSERT INTO session (session_id, root_dir) VALUES (?, ?)`
-	if _, err := s.db.ExecContext(ctx, q, sessionID, rootDir); err != nil {
+	const q = `INSERT INTO session (session_id, root_dir) VALUES (?, ?) RETURNING session_id, root_dir, created_at`
+	var sess store.Session
+	if err := s.db.QueryRowContext(ctx, q, sessionID, rootDir).Scan(
+		&sess.SessionID, &sess.RootDir, &sess.CreatedAt,
+	); err != nil {
 		return store.Session{}, fmt.Errorf("store: create session: %w", err)
 	}
-	return s.GetSession(ctx, sessionID)
+	return sess, nil
 }
 
 func (s *SQLiteStore) GetSession(ctx context.Context, sessionID string) (store.Session, error) {

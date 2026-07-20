@@ -1,6 +1,6 @@
 import type { Session, Message } from '../types'
 
-const BASE_URL: string = import.meta.env.VITE_API_BASE_URL || '/api'
+const BASE_URL: string = import.meta.env.VITE_API_BASE_URL
 
 export async function fetchSessions(): Promise<Session[]> {
   const response = await fetch(`${BASE_URL}/sessions`)
@@ -12,10 +12,10 @@ export async function fetchSessions(): Promise<Session[]> {
 }
 
 export async function createSession(path: string): Promise<Session> {
-  const response = await fetch(`${BASE_URL}/sessions`, {
+  const response = await fetch(`${BASE_URL}/api/sessions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ root_dir: path }),
   })
   if (!response.ok) {
     throw new Error(`Failed to create session: ${response.status}`)
