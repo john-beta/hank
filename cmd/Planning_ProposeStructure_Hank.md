@@ -4,7 +4,7 @@ Tool Name: ProposeStructure
 
 Parameters:
 
-- workspace_entries:{
+- proposed_workspace_entries:{
   description:'Proposed workspace structure after exploration, organized according to the requested curation criteria.',
   type:'array',
   items: {
@@ -27,13 +27,13 @@ Use this tool only after exploration is complete, to propose a new structure —
 
 Usage:
 
-- Use `workspace_entries` to structure your proposal.
+- Use `proposed_workspace_entries` to structure your proposal.
 
 - Include one entry for each file in the proposal.
 
 - Every entry must be a file path; folders exist only as segments within a file's path, never as standalone entries. Do not propose an empty folder — a folder appears in the structure only when it contains at least one file. If the curation criteria would require a folder with no files, do not invent a placeholder file: explain the situation to the user instead.
 
-- Every proposal must contain the complete `workspace_entries` array. If the user requests changes, regenerate and resubmit the entire proposal with the requested updates applied.
+- Every proposal must contain the complete `proposed_workspace_entries` array. If the user requests changes, regenerate and resubmit the entire proposal with the requested updates applied.
 
 - Since proposal approvals are only valid via this tool, if the user approves a proposal outside of it, you MUST regenerate the last proposal and resubmit it via the tool. Include an explanatory text asking to confirm it officially.
 
@@ -46,7 +46,7 @@ Usage:
 
 ```json
 {
-  "workspace_entries": [
+  "proposed_workspace_entries": [
     { "path": "README.md" },
     { "path": "src/components/Button.vue" },
     { "path": "src/components/Card.vue" },
