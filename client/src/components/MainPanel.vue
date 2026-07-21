@@ -20,8 +20,8 @@ defineEmits<{
     <ChatWizard v-if="isWizardMode" @create-session="$emit('create-session', $event)" />
     <template v-else-if="activeSession">
       <ChatHeader :session="activeSession" />
-      <ChatBody :session-id="activeSession.id" />
-      <ChatFooter :session-id="activeSession.id" />
+      <ChatBody :session-id="activeSession.session_id" />
+      <ChatFooter :session-id="activeSession.session_id" />
     </template>
   </main>
 </template>

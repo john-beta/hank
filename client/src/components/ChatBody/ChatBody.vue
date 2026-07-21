@@ -46,7 +46,7 @@ watch(
     <p v-else-if="error" class="chat-body-empty">Failed to load</p>
     <p v-else-if="allMessages.length === 0" class="chat-body-empty">No messages yet</p>
     <div v-else class="chat-body-messages">
-      <MessageRenderer v-for="message in allMessages" :key="message.id" :message="message" />
+      <MessageRenderer v-for="(message, index) in allMessages" :key="index" :message="message" />
     </div>
   </section>
 </template>

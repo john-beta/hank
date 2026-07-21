@@ -17,6 +17,10 @@ const component = computed(() => COMPONENT_BY_TYPE[props.message.type] ?? null)
 </script>
 
 <template>
-  <component :is="component" v-if="component" :message="message" />
-  <div v-else>Unsupported message type: {{ message.type }}</div>
+  <!-- <component :is="component" v-if="component" :message="message" />
+  <div v-else>Unsupported message type: {{ message.type }}</div> -->
+  <div>
+    <h3>Message</h3>
+    {{ JSON.stringify(message) }}
+  </div>
 </template>

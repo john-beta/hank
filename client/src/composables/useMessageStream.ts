@@ -1,41 +1,33 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import type { Message } from '../types'
+import { streamMessage } from '../services/streaming'
 
 const liveMessages: Ref<Message[]> = ref([])
 const streaming: Ref<boolean> = ref(false)
 const error: Ref<Error | null> = ref(null)
 
-let currentEventSource: EventSource | null = null
-
 async function sendMessage(sessionId: string, text: string): Promise<void> {
   error.value = null
   streaming.value = true
 
-  try {
-    // const response = await fetch(`/api/sessions/${sessionId}/messages`, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ text }),
-    // })
-    // currentEventSource = new EventSource(`/api/sessions/${sessionId}/messages/stream`)
-    // currentEventSource.onmessage = (event) => {
-    //   const parsed: Message = JSON.parse(event.data)
-    //   liveMessages.value.push(parsed)
-    // }
-    // currentEventSource.onerror = () => {
-    //   streaming.value = false
-    //   currentEventSource?.close()
-    // }
-  } catch (err) {
-    error.value = err instanceof Error ? err : new Error(String(err))
-    streaming.value = false
-  }
+  liveMessages.value.push({ type: 'text_delta', role: 'user', text })
+
+  await streamMessage(sessionId, text, {
+    // TODO: text_delta events currently arrive as separate entries; merging them into a single growing message is intentionally left for later.
+    onMessage: (event) => {
+      liveMessages.value.push({ ...event, role: 'agent' })
+    },
+    onClose: (ok) => {
+      streaming.value = false
+      if (!ok) {
+        error.value = new Error('Stream ended unexpectedly')
+      }
+    },
+  })
 }
 
 function reset(): void {
-  currentEventSource?.close()
-  currentEventSource = null
   liveMessages.value = []
   streaming.value = false
   error.value = null
