@@ -5,7 +5,7 @@ import "database/sql"
 // schema defines the session, turn, and call tables, created idempotently on
 // startup (no migration framework).
 //
-// turn.output_text: the user's message or the agent's streamed text; NULL for a
+// turn.output_text: the user's message or the assistant's streamed text; NULL for a
 // user turn carrying a tool result (payload lives in call.result instead).
 //
 // call: one row per call_id — INSERT with result NULL when emitted, UPDATE in
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS session (
 CREATE TABLE IF NOT EXISTS turn (
     turn_id     TEXT PRIMARY KEY,
     session_id  TEXT NOT NULL REFERENCES session(session_id),
-    role        TEXT NOT NULL CHECK(role IN ('user', 'agent')),
+    role        TEXT NOT NULL CHECK(role IN ('user', 'assistant')),
     output_text TEXT,
     response_id TEXT,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP

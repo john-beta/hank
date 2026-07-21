@@ -1,4 +1,4 @@
-import type { Message } from '../types'
+import type { StreamEvent } from '../types'
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL
 
@@ -6,7 +6,7 @@ export async function streamMessage(
   sessionId: string,
   message: string,
   callbacks: {
-    onMessage: (event: Message) => void
+    onMessage: (event: StreamEvent) => void
     onClose: (ok: boolean) => void
   },
 ): Promise<void> {
@@ -28,7 +28,7 @@ export async function streamMessage(
 
   function handleLine(line: string): void {
     if (line === '') return
-    let parsed: Message
+    let parsed: StreamEvent
     try {
       parsed = JSON.parse(line)
     } catch {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import type { Ref } from 'vue'
-import type { Message } from '../../types'
+import type { ChatMessage } from '../../types'
 import { fetchSessionHistory } from '../../services/api'
 import MessageRenderer from '../messages/MessageRenderer.vue'
 import { useMessageStream } from '../../composables/useMessageStream'
@@ -10,19 +10,19 @@ const props = defineProps<{
   sessionId: string
 }>()
 
-const messages: Ref<Message[]> = ref([])
+const history: Ref<ChatMessage[]> = ref([])
 const loading: Ref<boolean> = ref(false)
 const error: Ref<Error | null> = ref(null)
 
-const { liveMessages, reset: resetStream } = useMessageStream()
+const { messages: liveMessages, reset: resetStream } = useMessageStream()
 
-const allMessages = computed(() => [...messages.value, ...liveMessages.value])
+const allMessages = computed(() => [...history.value, ...liveMessages.value])
 
 async function loadHistory(sessionId: string): Promise<void> {
   loading.value = true
   error.value = null
   try {
-    messages.value = await fetchSessionHistory(sessionId)
+    history.value = await fetchSessionHistory(sessionId)
   } catch (err) {
     // error.value = err instanceof Error ? err : new Error(String(err))
   } finally {
