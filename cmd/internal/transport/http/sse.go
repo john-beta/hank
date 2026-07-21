@@ -7,8 +7,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/agent"
 )
 
-type SSEJsonError struct{
-	Type string
+type SSEJsonError struct {
+	Type  string
 	Error string
 }
 
@@ -21,7 +21,7 @@ func setSSEHeaders(w http.ResponseWriter) {
 // writeSSE flushes explicitly so the client receives each frame immediately.
 func writeSSE(w http.ResponseWriter, event agent.Event) {
 	data, err := json.Marshal(event)
-	
+
 	if err != nil {
 		data, _ = json.Marshal(SSEJsonError{Type: "error", Error: err.Error()})
 	}
