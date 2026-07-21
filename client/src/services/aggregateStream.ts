@@ -43,7 +43,13 @@ export function applyEvent(messages: ChatMessage[], event: StreamEvent): void {
       }
       break
     }
-    // 'done' | 'error' | future types: ignored for now.
+    case 'error':
+      currentAssistant(messages).parts.push({
+        type: 'error',
+        error: event.error ?? 'Unknown error',
+      })
+      break
+    // 'done' | future types: ignored for now.
     // To handle one, add a case here (and a Part type in types.ts if it renders).
   }
 }

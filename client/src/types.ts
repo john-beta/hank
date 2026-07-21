@@ -38,7 +38,12 @@ export interface ToolPart {
   state: 'call' | 'result'
 }
 
-export type Part = TextPart | ToolPart
+export interface ErrorPart {
+  type: 'error'
+  error: string
+}
+
+export type Part = TextPart | ToolPart | ErrorPart
 
 export interface ChatMessage {
   role: RoleType
