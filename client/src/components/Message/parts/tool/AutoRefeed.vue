@@ -24,7 +24,7 @@ const script = computed(() => {
 const result = computed(() => {
   if (props.part.result == null) return null
   try {
-    return JSON.parse(props.part.result) as { success: boolean, output?: string, error?: string }
+    return JSON.parse(props.part.result) as { success: boolean; output?: string; error?: string }
   } catch {
     return null
   }
@@ -50,11 +50,13 @@ const state = computed<'input-available' | 'output-available' | 'output-error'>(
 </script>
 
 <template>
-  <Tool :default-open="true">
+  <Tool :default-open="false">
     <ToolHeader :type="`tool-${part.name ?? 'unknown'}`" :state="state" :title="part.name" />
     <ToolContent>
       <div class="space-y-2 p-4">
-        <h4 class="font-medium text-muted-foreground text-xs uppercase tracking-wide">Parameters</h4>
+        <h4 class="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+          Parameters
+        </h4>
         <CodeBlock :code="script" language="python" />
       </div>
       <div v-if="part.state === 'result'" class="space-y-2 p-4">
