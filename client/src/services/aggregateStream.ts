@@ -28,6 +28,7 @@ export function applyEvent(messages: ChatMessage[], event: StreamEvent): void {
         callId: event.call_id,
         name: event.tool_name,
         args: event.tool_args,
+        autoReFeed: event.auto_re_feed,
         state: 'call',
       })
       break

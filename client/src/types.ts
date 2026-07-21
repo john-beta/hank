@@ -34,6 +34,7 @@ export interface ToolPart {
   name?: string
   args?: string
   result?: string
+  autoReFeed?: boolean
   state: 'call' | 'result'
 }
 

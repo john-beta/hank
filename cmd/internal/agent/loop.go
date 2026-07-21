@@ -137,7 +137,7 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 	if err := a.store.UpdateCallResult(ctx, call.CallID, output); a.fail(ctx, out, err) {
 		return llm.Request{}, false
 	}
-	a.emit(ctx, out, Event{Type: EventToolResult, ToolName: call.Name, ToolResult: output})
+	a.emit(ctx, out, Event{Type: EventToolResult, CallID: call.CallID, ToolName: call.Name, ToolResult: output})
 
 	return llm.Request{
 		ToolResults:    []llm.ToolResult{{CallID: call.CallID, Output: output}},

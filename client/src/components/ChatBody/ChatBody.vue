@@ -3,7 +3,7 @@ import { ref, watch, computed } from 'vue'
 import type { Ref } from 'vue'
 import type { ChatMessage } from '../../types'
 import { fetchSessionHistory } from '../../services/api'
-import MessageRenderer from '../messages/MessageRenderer.vue'
+import MessageRenderer from '../Message/MessageRenderer.vue'
 import { useMessageStream } from '../../composables/useMessageStream'
 
 const props = defineProps<{
@@ -14,7 +14,7 @@ const history: Ref<ChatMessage[]> = ref([])
 const loading: Ref<boolean> = ref(false)
 const error: Ref<Error | null> = ref(null)
 
-const { messages: liveMessages, reset: resetStream } = useMessageStream()
+const { messages: liveMessages, reset: resetStream, streaming } = useMessageStream()
 
 const allMessages = computed(() => [...history.value, ...liveMessages.value])
 

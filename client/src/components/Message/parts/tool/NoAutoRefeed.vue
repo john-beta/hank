@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ToolPart } from '../../../types'
+import type { ToolPart } from '../../../../types'
 
 defineProps<{
   part: ToolPart
