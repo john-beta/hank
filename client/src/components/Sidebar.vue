@@ -24,10 +24,10 @@ defineEmits<{
         <p v-if="sessions.length === 0">No sessions yet</p>
         <button
           v-for="session in sessions"
-          :key="session.id"
+          :key="session.session_id"
           class="chat-list-item"
-          :class="{ 'chat-list-item--active': session.id === activeSessionId }"
-          @click="$emit('select-session', session.id)"
+          :class="{ 'chat-list-item--active': session.session_id === activeSessionId }"
+          @click="$emit('select-session', session.session_id)"
         >
           {{ session.root_dir }}
         </button>

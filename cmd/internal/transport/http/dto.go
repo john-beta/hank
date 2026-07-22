@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/json"
 	"errors"
+	"time"
 )
 
 var errMissingInput = errors.New("request must contain either input.message or tool_result")
@@ -25,5 +26,7 @@ type CreateSessionRequest struct {
 }
 
 type CreateSessionResponse struct {
-	SessionID string `json:"session_id"`
+	SessionID string    `json:"session_id"`
+	RootDir   string    `json:"root_dir"`
+	CreatedAt time.Time `json:"created_at"`
 }

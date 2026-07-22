@@ -16,7 +16,7 @@ function select(sessionId: string): void {
 
 export function useActiveSession(sessions: Ref<Session[]>) {
   const activeSession = computed(() => {
-    return sessions.value.find((session) => session.id === activeSessionId.value) ?? null
+    return sessions.value.find((session) => session.session_id === activeSessionId.value) ?? null
   })
 
   return { activeSessionId, activeSession, isWizardMode, startNew, select }

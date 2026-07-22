@@ -26,11 +26,11 @@ func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setSSEHeaders(w)
+	setStreamingHeaders(w)
 
 	events := h.agent.Handle(r.Context(), req.SessionID, input)
 	for event := range events {
-		writeSSE(w, event)
+		writeStreaming(w, event)
 	}
 }
 

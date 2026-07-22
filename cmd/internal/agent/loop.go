@@ -44,7 +44,7 @@ func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.
 	state.PrevResponseID = res.responseID
 
 	if res.call == nil {
-		if _, err := a.saveAgentTurn(ctx, state, res); a.fail(ctx, out, err) {
+		if _, err := a.saveAssistantTurn(ctx, state, res); a.fail(ctx, out, err) {
 			return llm.Request{}, false
 		}
 		a.emit(ctx, out, Event{Type: EventDone, ResponseID: res.responseID})
@@ -101,7 +101,7 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 	call := res.call
 	auto := m.AutoReFeed(call.Name)
 
-	turnID, err := a.saveAgentTurn(ctx, state, res)
+	turnID, err := a.saveAssistantTurn(ctx, state, res)
 	if a.fail(ctx, out, err) {
 		return llm.Request{}, false
 	}
@@ -137,7 +137,7 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 	if err := a.store.UpdateCallResult(ctx, call.CallID, output); a.fail(ctx, out, err) {
 		return llm.Request{}, false
 	}
-	a.emit(ctx, out, Event{Type: EventToolResult, ToolName: call.Name, ToolResult: output})
+	a.emit(ctx, out, Event{Type: EventToolResult, CallID: call.CallID, ToolName: call.Name, ToolResult: output})
 
 	return llm.Request{
 		ToolResults:    []llm.ToolResult{{CallID: call.CallID, Output: output}},
@@ -145,12 +145,12 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 	}, true
 }
 
-func (a *Agent) saveAgentTurn(ctx context.Context, state *State, res streamResult) (string, error) {
+func (a *Agent) saveAssistantTurn(ctx context.Context, state *State, res streamResult) (string, error) {
 	respID := res.responseID
 	text := res.text
 	return a.store.SaveTurn(ctx, store.Turn{
 		SessionID:  state.SessionID,
-		Role:       "agent",
+		Role:       "assistant",
 		OutputText: &text,
 		ResponseID: &respID,
 	})

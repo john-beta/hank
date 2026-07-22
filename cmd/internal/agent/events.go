@@ -12,7 +12,7 @@ const (
 	EventError      EventType = "error"
 )
 
-// Event is emitted directly over SSE. AutoReFeed is a *bool, not bool, so a
+// Event is emitted directly over the streaming response. AutoReFeed is a *bool, not bool, so a
 // meaningful false survives JSON encoding (omitempty would drop a plain false),
 // signalling the client that it must resolve the call itself.
 type Event struct {

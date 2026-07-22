@@ -7,18 +7,18 @@ import (
 	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
 )
 
-// RunExecution's presence here and absence from Planning is the mode boundary.
+// RunImplementation's presence here and absence from Planning is the mode boundary.
 var autoReFeed = map[string]bool{
-	"RunExploration": true,
-	"RunExecution":   true,
+	"GetWorkspaceCurrentState": true,
+	"RunImplementation":        true,
 }
 
 // execute routes Executing's tool names; bodies are stubs until the real logic lands.
 func execute(ctx context.Context, name string, args string) (string, error) {
 	switch name {
-	case "RunExploration":
+	case "GetWorkspaceCurrentState":
 		return mode.RunPythonProcess(ctx, args)
-	case "RunExecution":
+	case "RunImplementation":
 		return mode.RunPythonProcess(ctx, args)
 	default:
 		return unreachableToolErrorToJSON(&unreachableToolError{Success: false, Error: "Tool result not found for this call"}), nil

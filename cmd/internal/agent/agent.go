@@ -43,13 +43,13 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 		return
 	}
 
-	lastAgentTurn, err := a.store.LastAgentTurn(ctx, sessionID)
+	lastAssistantTurn, err := a.store.LastAssistantTurn(ctx, sessionID)
 	if err != nil {
 		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
 		return
 	}
 
-	state := StateFromStore(sess, lastAgentTurn)
+	state := StateFromStore(sess, lastAssistantTurn)
 
 	req, ok := a.prepareRequest(ctx, state, input, out)
 	if !ok {
