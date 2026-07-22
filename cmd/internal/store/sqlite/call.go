@@ -29,13 +29,13 @@ func (s *SQLiteStore) UpdateCallResult(ctx context.Context, callID string, resul
 }
 
 // PendingCall returns the single unresolved, non-auto call on the session's
-// latest agent turn, or nil, nil if none is outstanding.
+// latest assistant turn, or nil, nil if none is outstanding.
 func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store.Call, error) {
 	const q = `SELECT call_id, turn_id, name, args, result, auto_re_feed
 	           FROM call
 	           WHERE turn_id = (
 	               SELECT turn_id FROM turn
-	               WHERE session_id = ? AND role = 'agent'
+	               WHERE session_id = ? AND role = 'assistant'
 	               ORDER BY created_at DESC, rowid DESC
 	               LIMIT 1
 	           )

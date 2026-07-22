@@ -24,5 +24,5 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(CreateSessionResponse{SessionID: sess.SessionID})
+	json.NewEncoder(w).Encode(CreateSessionResponse{SessionID: sess.SessionID, RootDir: sess.RootDir, CreatedAt: sess.CreatedAt})
 }

@@ -10,9 +10,9 @@ export function useChatSession() {
     sessionList.load()
   })
 
-  async function createAndSelect(chosenFilePath: string): Promise<void> {
-    const session = await sessionList.create(chosenFilePath)
-    activeSession.select(session.id)
+  async function createAndSelect(chosenRootDir: string): Promise<void> {
+    const session = await sessionList.create(chosenRootDir)
+    activeSession.select(session.session_id)
   }
 
   return {

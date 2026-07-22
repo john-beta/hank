@@ -14,12 +14,12 @@ type Session struct {
 }
 
 // Turn is a single exchange within a session. OutputText is the user's message
-// or the agent's streamed text, nil for a tool-result user turn (whose payload
+// or the assistant's streamed text, nil for a tool-result user turn (whose payload
 // lives in call.result). See migrations.go.
 type Turn struct {
 	TurnID     string
 	SessionID  string
-	Role       string  // "user" or "agent"
+	Role       string  // "user" or "assistant"
 	OutputText *string // nil for tool-result user turns
 	ResponseID *string // nil for user turns
 	CreatedAt  time.Time
@@ -41,11 +41,11 @@ type Store interface {
 	GetSession(ctx context.Context, sessionID string) (Session, error)
 
 	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
-	LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error)
+	LastAssistantTurn(ctx context.Context, sessionID string) (*Turn, error)
 
 	SaveCall(ctx context.Context, c Call) error
 	UpdateCallResult(ctx context.Context, callID string, result string) error
 	// PendingCall returns the single unresolved, non-auto call for the
-	// session's latest agent turn, or nil, nil if there is none.
+	// session's latest assistant turn, or nil, nil if there is none.
 	PendingCall(ctx context.Context, sessionID string) (*Call, error)
 }

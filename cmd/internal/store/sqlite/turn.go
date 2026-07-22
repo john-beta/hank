@@ -21,13 +21,13 @@ func (s *SQLiteStore) SaveTurn(ctx context.Context, t store.Turn) (string, error
 	return turnID, nil
 }
 
-// LastAgentTurn returns the most recent agent turn, or nil, nil if none yet.
-// created_at has one-second resolution and a loop can persist several agent
+// LastAssistantTurn returns the most recent assistant turn, or nil, nil if none yet.
+// created_at has one-second resolution and a loop can persist several assistant
 // turns within one second, so rowid (monotonic per INSERT) breaks the tie.
-func (s *SQLiteStore) LastAgentTurn(ctx context.Context, sessionID string) (*store.Turn, error) {
+func (s *SQLiteStore) LastAssistantTurn(ctx context.Context, sessionID string) (*store.Turn, error) {
 	const q = `SELECT turn_id, session_id, role, output_text, response_id, created_at
 	           FROM turn
-	           WHERE session_id = ? AND role = 'agent'
+	           WHERE session_id = ? AND role = 'assistant'
 	           ORDER BY created_at DESC, rowid DESC
 	           LIMIT 1`
 	var t store.Turn
@@ -38,7 +38,7 @@ func (s *SQLiteStore) LastAgentTurn(ctx context.Context, sessionID string) (*sto
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("store: last agent turn for session %s: %w", sessionID, err)
+		return nil, fmt.Errorf("store: last assistant turn for session %s: %w", sessionID, err)
 	}
 	return &t, nil
 }

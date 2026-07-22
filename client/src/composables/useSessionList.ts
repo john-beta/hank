@@ -19,8 +19,8 @@ async function load(): Promise<void> {
   }
 }
 
-async function create(chosenFilePath: string): Promise<Session> {
-  const session = await createSession(chosenFilePath)
+async function create(chosenRootDir: string): Promise<Session> {
+  const session = await createSession(chosenRootDir)
   sessions.value.push(session)
   return session
 }

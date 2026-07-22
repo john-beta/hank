@@ -1,23 +1,38 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { Ref } from 'vue'
+import { computed } from 'vue'
+import { useMessageStream } from '../../composables/useMessageStream'
+import { useToolApproval } from '../../composables/useToolApproval'
+import { PromptInput, PromptInputSubmit, PromptInputTextarea } from '../ai-elements/prompt-input'
+import type { PromptInputMessage } from '../ai-elements/prompt-input'
 
-defineProps<{
+const props = defineProps<{
   sessionId: string
 }>()
 
-const draft: Ref<string> = ref('')
+const { streaming, sendMessage, resolveTool } = useMessageStream()
+const { pending, inputBlocked } = useToolApproval()
 
-function handleSubmit(): void {
-  draft.value = ''
+const disabled = computed(() => streaming.value || inputBlocked.value)
+
+const placeholder = computed(() =>
+  inputBlocked.value ? 'Approve or request changes to continue...' : 'Type a message...',
+)
+
+// Reaching submit with a call still pending means the user chose "Request
+// changes", so the text resolves that call instead of starting a new turn.
+function handleSubmit(message: PromptInputMessage): void {
+  const text = message.text.trim()
+  if (text === '') return
+  if (pending.value) resolveTool(false, text)
+  else sendMessage(props.sessionId, text)
 }
 </script>
 
 <template>
   <footer class="chat-footer">
-    <form class="chat-footer-form" @submit.prevent="handleSubmit">
-      <input class="chat-footer-input" v-model="draft" placeholder="Type a message..." />
-      <button class="chat-footer-send-btn">Send</button>
-    </form>
+    <PromptInput class="chat-footer-form" @submit="handleSubmit">
+      <PromptInputTextarea :placeholder="placeholder" :disabled="disabled" />
+      <PromptInputSubmit :status="streaming ? 'streaming' : 'ready'" :disabled="disabled" />
+    </PromptInput>
   </footer>
 </template>
