@@ -13,7 +13,7 @@ defineProps<{
       <AlertCircleIcon class="mt-0.5 mr-2 shrink-0 text-red-600" :size="20" />
       <div class="min-w-0 flex-1">
         <h3 class="font-semibold text-red-900">Error</h3>
-        <p>{{ part.error }}</p>
+        <p class="mt-1 text-sm text-red-700">{{ part.error }}</p>
       </div>
     </div>
   </div>

@@ -1,10 +1,10 @@
-import type { StreamEvent } from '../types'
+import type { StreamEvent, TurnInput } from '../types'
 
 const BASE_URL: string = import.meta.env.VITE_API_BASE_URL
 
 export async function streamMessage(
   sessionId: string,
-  message: string,
+  input: TurnInput,
   callbacks: {
     onMessage: (event: StreamEvent) => void
     onClose: (ok: boolean) => void
@@ -13,7 +13,7 @@ export async function streamMessage(
   const response = await fetch(`${BASE_URL}/api/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input: { message }, session_id: sessionId }),
+    body: JSON.stringify({ ...input, session_id: sessionId }),
   })
 
   if (!response.ok || !response.body) {

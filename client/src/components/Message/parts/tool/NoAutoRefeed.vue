@@ -3,6 +3,7 @@ import type { ToolPart } from '../../../../types'
 import type { VNode } from 'vue'
 import { computed, h } from 'vue'
 import { FileTree, FileTreeFile, FileTreeFolder } from '../../../ai-elements/file-tree'
+import HITL from './HITL.vue'
 
 const props = defineProps<{
   part: ToolPart
@@ -92,5 +93,6 @@ function FileTreeNode(nodeProps: { node: TreeNode }): VNode {
     <FileTree v-if="tree.length" :default-expanded="allFolderPaths">
       <FileTreeNode v-for="node in tree" :key="node.path" :node="node" />
     </FileTree>
+    <HITL :part="part" />
   </div>
 </template>

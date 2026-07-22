@@ -8,7 +8,7 @@ import (
 )
 
 // ProposeStructure is not auto-re-fed: the client resolves it, and an approving
-// result flips the session into Executing. RunExecution is absent by design —
+// result flips the session into Executing. RunImplementation is absent by design —
 // its absence is the mode boundary.
 var autoReFeed = map[string]bool{
 	"RunExploration":   true,

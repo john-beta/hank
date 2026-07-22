@@ -22,6 +22,17 @@ export interface StreamEvent {
   response_id?: string
 }
 
+// The client's resolution of a tool call the agent left to a human.
+export interface ToolDecision {
+  approved: boolean
+  message: string
+}
+
+// Wire protocol: POST /api/messages body — exactly one of input | tool_result.
+export type TurnInput =
+  | { input: { message: string } }
+  | { tool_result: { call_id: string; result: ToolDecision } }
+
 // UI model: one chat turn, made of ordered parts.
 export interface TextPart {
   type: 'text'
