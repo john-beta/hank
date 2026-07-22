@@ -58,6 +58,15 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 
 	m := resolveMode(state.ApprovedProposal)
 
+	vars, err := resolveVariables(state.ApprovedProposal, input, a.store)
+
+	if err != nil {
+		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+		return
+	}
+
+	req.Prompt.Variables = vars
+
 	a.runLoop(ctx, state, m, req, out)
 }
 
@@ -67,4 +76,21 @@ func resolveMode(approvedProposal bool) mode.Mode {
 		return executing.New()
 	}
 	return planning.New()
+}
+
+// Map variables required per mode.
+// For the moment, just executing (HITL) <--triggered by approvedProposal in true.
+func resolveVariables(approvedProposal bool, turn TurnInput, store store.Store) (map[string]string, error) {
+	if !approvedProposal {
+		return map[string]string{}, nil
+	}
+
+	p, err := store.GetProposedStructureByCallID(turn.ToolResult.CallID)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"plan_structure": p,
+	}, nil
 }

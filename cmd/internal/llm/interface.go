@@ -15,8 +15,9 @@ type Request struct {
 // Prompt references a stored OpenAI prompt (defined in the dashboard: system
 // instructions, tools, model, reasoning). Version is optional; empty omits it.
 type Prompt struct {
-	ID      string
-	Version string
+	ID        string
+	Version   string
+	Variables map[string]string
 }
 
 type ToolResult struct {

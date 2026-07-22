@@ -70,6 +70,7 @@ func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *
 	// starts back at Planning unless it too carries an approving result.
 	if approvedFromResult(tr.Result) {
 		state.ApprovedProposal = true
+		state.PrevResponseID = ""
 	}
 
 	if _, err := a.store.SaveTurn(ctx, store.Turn{

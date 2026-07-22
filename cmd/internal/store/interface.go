@@ -48,4 +48,5 @@ type Store interface {
 	// PendingCall returns the single unresolved, non-auto call for the
 	// session's latest assistant turn, or nil, nil if there is none.
 	PendingCall(ctx context.Context, sessionID string) (*Call, error)
+	GetProposedStructureByCallID(callID string) (string, error)
 }

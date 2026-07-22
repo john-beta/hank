@@ -12,6 +12,16 @@ import (
 func buildParams(req Request) responses.ResponseNewParams {
 	prompt := responses.ResponsePromptParam{ID: req.Prompt.ID, Version: param.Opt[string]{Value: req.Prompt.Version}}
 
+	if len(req.Prompt.Variables) > 0 {
+		variables := make(map[string]responses.ResponsePromptVariableUnionParam, len(req.Prompt.Variables))
+		for k, v := range req.Prompt.Variables {
+			variables[k] = responses.ResponsePromptVariableUnionParam{
+				OfString: param.Opt[string]{Value: v},
+			}
+		}
+		prompt.Variables = variables
+	}
+
 	params := responses.ResponseNewParams{
 		Prompt:            prompt,
 		ParallelToolCalls: openai.Bool(false),
