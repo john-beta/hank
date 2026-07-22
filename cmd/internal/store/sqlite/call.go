@@ -57,14 +57,18 @@ func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store
 	return &c, nil
 }
 
-func (s *SQLiteStore) GetProposedStructureByCallID(callID string) (string, error) {
-	const q = `SELECT args FROM call WHERE call_id = ?`
+func (s *SQLiteStore) PendingProposeStructureByCallID(callID string) (string, error) {
+	const q = `SELECT args FROM call WHERE name = 'ProposeStructure' AND call_id = ?`
 
 	var rawArgs string
 
 	err := s.db.QueryRowContext(context.Background(), q, callID).Scan(&rawArgs)
 	if err != nil {
 		return "", fmt.Errorf("store: get args for call %s: %w", callID, err)
+	}
+
+	if rawArgs==""{
+		return "", fmt.Errorf("store: trying to get a non-proposal tool for %s", callID)
 	}
 
 	var args struct {

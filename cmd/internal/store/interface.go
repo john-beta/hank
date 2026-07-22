@@ -43,10 +43,10 @@ type Store interface {
 	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
 	LastAssistantTurn(ctx context.Context, sessionID string) (*Turn, error)
 
-	SaveCall(ctx context.Context, c Call) error
-	UpdateCallResult(ctx context.Context, callID string, result string) error
 	// PendingCall returns the single unresolved, non-auto call for the
 	// session's latest assistant turn, or nil, nil if there is none.
 	PendingCall(ctx context.Context, sessionID string) (*Call, error)
-	GetProposedStructureByCallID(callID string) (string, error)
+	SaveCall(ctx context.Context, c Call) error
+	UpdateCallResult(ctx context.Context, callID string, result string) error
+	PendingProposeStructureByCallID(callID string) (string, error)
 }
