@@ -65,9 +65,10 @@ func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *
 		return llm.Request{}, false
 	}
 
-	// CORE: planning -> executing Transition
-	// Clear PrevResponseID so the executing agent starts with a fresh context. Experiments show that preserving it causes biases due to planning-reasoning.
-	// Since PrevResponseID is cut, we cannot send tool results - it is not longer in OpenAI. Instead, send a simple message. 
+	// Planning -> Executing transition. Clear PrevResponseID so Executing starts
+	// fresh; preserving it biases the model toward planning-phase reasoning. With
+	// the previous response dropped, the tool result can't be re-fed to OpenAI, so
+	// send a plain message instead.
 	if approvedFromResult(tr.Result) {
 		state.ApprovedProposal = true
 		state.PrevResponseID = ""

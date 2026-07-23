@@ -76,8 +76,8 @@ func resolveMode(approvedProposal bool) modes.Mode {
 	return modes.NewPlanning()
 }
 
-// Map variables required per mode.
-// For the moment, just executing <--triggered by approvedProposal in true.
+// resolveModeVariables builds the prompt variables a mode needs. Only Executing
+// needs any (the approved plan structure); Planning gets an empty map.
 func resolveModeVariables(ctx context.Context, approvedProposal bool, turn TurnInput, store store.Store) (map[string]string, error) {
 	if !approvedProposal {
 		return map[string]string{}, nil

@@ -9,8 +9,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// SaveCall inserts a call row with result NULL — the INSERT half of the
-// one-row-per-call_id lifecycle (UpdateCallResult is the UPDATE half).
+// SaveCall inserts a call row with result NULL; UpdateCallResult fills it in
+// when the call resolves. One row per call_id — never a second INSERT.
 func (s *SQLiteStore) SaveCall(ctx context.Context, c store.Call) error {
 	const q = `INSERT INTO call (call_id, turn_id, name, args, result, auto_re_feed)
 	           VALUES (?, ?, ?, ?, NULL, ?)`
@@ -29,10 +29,8 @@ func (s *SQLiteStore) UpdateCallResult(ctx context.Context, callID string, resul
 	return nil
 }
 
-// IsPendingCall reports whether callID names an unresolved, non-auto tool
-// call — one still awaiting a client-supplied result. It is the desync guard
-// for tool-result submission: an unknown, already-resolved, or auto call
-// reports false.
+// IsPendingCall guards tool-result submission against desync: an unknown,
+// already-resolved, or auto call reports false.
 func (s *SQLiteStore) IsPendingCall(ctx context.Context, callID string) (bool, error) {
 	const q = `SELECT 1 FROM call
 	           WHERE call_id = ? AND result IS NULL AND auto_re_feed = 0`

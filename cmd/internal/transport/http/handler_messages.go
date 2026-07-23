@@ -7,8 +7,8 @@ import (
 	"github.com/john-beta/hank/cmd/internal/agent"
 )
 
-// Passing r.Context() wires client disconnects to cancellation: the context
-// cancels, the agent loop and LLM stream unwind, the events channel closes.
+// PostMessage streams one turn's events. r.Context() ties client disconnects to
+// cancellation, unwinding the agent loop and LLM stream.
 func (h *Handler) PostMessage(w http.ResponseWriter, r *http.Request) {
 	var req SendMessageRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

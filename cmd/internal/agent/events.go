@@ -12,9 +12,9 @@ const (
 	EventError      EventType = "error"
 )
 
-// Event is emitted directly over the streaming response. AutoReFeed is a *bool, not bool, so a
-// meaningful false survives JSON encoding (omitempty would drop a plain false),
-// signalling the client that it must resolve the call itself.
+// Event is emitted over the streaming response. AutoReFeed is *bool so a
+// meaningful false survives JSON (omitempty drops a plain false), telling the
+// client it must resolve the call itself.
 type Event struct {
 	Type       EventType `json:"type"`
 	Text       string    `json:"text,omitempty"`

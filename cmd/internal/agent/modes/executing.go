@@ -25,7 +25,7 @@ func NewExecuting() Mode {
 	}
 }
 
-// executingExecute routes Executing's tool names; bodies are stubs until the real logic lands.
+// executingExecute routes Executing's tool names to their handlers.
 func executingExecute(ctx context.Context, name string, args string, state ExecState) (string, error) {
 	switch name {
 	case "GetWorkspaceCurrentState":
