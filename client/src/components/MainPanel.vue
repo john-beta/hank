@@ -9,15 +9,11 @@ defineProps<{
   isWizardMode: boolean
   activeSession: Session | null
 }>()
-
-defineEmits<{
-  'create-session': [chosenRootDir: string]
-}>()
 </script>
 
 <template>
   <main class="main">
-    <ChatWizard v-if="isWizardMode" @create-session="$emit('create-session', $event)" />
+    <ChatWizard v-if="isWizardMode" />
     <template v-else-if="activeSession">
       <ChatHeader :session="activeSession" />
       <ChatBody :session-id="activeSession.session_id" />
