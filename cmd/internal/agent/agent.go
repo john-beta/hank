@@ -56,7 +56,7 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 
 	m := resolveMode(state.ApprovedProposal)
 
-	vars, err := resolveModeVariables(state.ApprovedProposal, input, a.store)
+	vars, err := resolveModeVariables(ctx, state.ApprovedProposal, input, a.store)
 
 	if err != nil {
 		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
@@ -78,12 +78,12 @@ func resolveMode(approvedProposal bool) modes.Mode {
 
 // Map variables required per mode.
 // For the moment, just executing <--triggered by approvedProposal in true.
-func resolveModeVariables(approvedProposal bool, turn TurnInput, store store.Store) (map[string]string, error) {
+func resolveModeVariables(ctx context.Context, approvedProposal bool, turn TurnInput, store store.Store) (map[string]string, error) {
 	if !approvedProposal {
 		return map[string]string{}, nil
 	}
 
-	p, err := store.PendingProposeStructureByCallID(turn.ToolResult.CallID)
+	p, err := store.PendingProposeStructureByCallID(ctx, turn.ToolResult.CallID)
 	if err != nil {
 		return nil, err
 	}

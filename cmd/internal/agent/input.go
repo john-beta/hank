@@ -49,14 +49,14 @@ func (a *Agent) prepareMessageRequest(ctx context.Context, state *State, message
 }
 
 func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *ToolResultInput, out chan<- Event) (llm.Request, bool) {
-	pending, err := a.store.PendingCall(ctx, state.SessionID)
+	pending, err := a.store.IsPendingCall(ctx, tr.CallID)
 	if err != nil {
 		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
 		return llm.Request{}, false
 	}
-	if pending == nil || pending.CallID != tr.CallID {
+	if !pending {
 		// Do not forward a desynced call to OpenAI.
-		a.emit(ctx, out, Event{Type: EventError, Error: fmt.Sprintf("agent: tool result call_id %q does not match the pending call", tr.CallID)})
+		a.emit(ctx, out, Event{Type: EventError, Error: fmt.Sprintf("agent: tool result call_id %q does not match a pending call", tr.CallID)})
 		return llm.Request{}, false
 	}
 
