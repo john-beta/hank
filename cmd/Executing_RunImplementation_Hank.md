@@ -14,7 +14,7 @@ Usage:
 
 - Use Python for the script.
 - The script must perform only the operations necessary for the implementation and return the implementation result as a single JSON value.
-- If the script fails due to an execution error and cannot produce a valid JSON result, diagnose the root cause, modify the generated script, and automatically resubmit the implementation with the fixed script. If corrected attempts remain to fail, stop this implementation and continue with next step.
+- If the script fails due to an execution error and cannot produce a valid JSON result, diagnose the root cause, modify the generated script, and automatically resubmit the implementation with the fixed script. If corrected attempts remain to fail, stop the implementation and report the error to the user.
 
 Python Notes:
 
@@ -28,6 +28,6 @@ Python Notes:
 
 # Safety Protocol
 
-- Perform ONLY the mutations specified exactly in the approved proposal structure. Additional mutations are not allowed.
+- Perform ONLY the mutations specified exactly in the plan structure. Additional mutations are not allowed.
 
 - Perform ONLY the filesystem operations required for the implementation.

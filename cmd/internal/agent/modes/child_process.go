@@ -1,12 +1,14 @@
-package mode
+package modes
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type PythonResult struct {
@@ -15,22 +17,34 @@ type PythonResult struct {
 	Error   string `json:"error,omitempty"`
 }
 
-func RunPythonProcess(ctx context.Context, args string) (string, error) {
+func RunPythonProcess(ctx context.Context, args string, rootDir string) (string, error) {
 	script, err := scriptFromArgs(args)
 	if err != nil {
 		return pythonResultToJSON(&PythonResult{Success: false, Error: err.Error()}), nil
 	}
 
-	cmd := exec.CommandContext(ctx, "py", "-")
+	cmd := exec.CommandContext(ctx, "py", "-I", "-")
+	cmd.Dir = rootDir
 	cmd.Stdin = strings.NewReader(script)
+
+	cmd.Env = []string{
+		"SystemRoot=" + os.Getenv("SystemRoot"),
+	}
+
+	cmd.WaitDelay = 15 * time.Second
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	runErr := cmd.Run()
+	runErr := runInJobObject(cmd)
 
 	if runErr == nil {
+
+		if stdout.String() == "" {
+			return buildUnsuccessResult("No output captured. Use `print`"), nil
+		}
+
 		return pythonResultToJSON(&PythonResult{Success: true, Output: stdout.String()}), nil
 	}
 
@@ -40,10 +54,14 @@ func RunPythonProcess(ctx context.Context, args string) (string, error) {
 
 	var exitErr *exec.ExitError
 	if errors.As(runErr, &exitErr) {
-		return pythonResultToJSON(&PythonResult{Success: false, Error: stderr.String()}), nil
+		return buildUnsuccessResult(stderr.String()), nil
 	}
 
-	return pythonResultToJSON(&PythonResult{Success: false, Error: runErr.Error()}), nil
+	return buildUnsuccessResult(runErr.Error()), nil
+}
+
+func buildUnsuccessResult(err string) string {
+	return pythonResultToJSON(&PythonResult{Success: false, Error: err})
 }
 
 func pythonResultToJSON(result *PythonResult) string {

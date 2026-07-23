@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/john-beta/hank/cmd/internal/store"
@@ -54,6 +55,33 @@ func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store
 	}
 	c.AutoReFeed = auto != 0
 	return &c, nil
+}
+
+func (s *SQLiteStore) PendingProposeStructureByCallID(callID string) (string, error) {
+	const q = `SELECT args FROM call WHERE name = 'ProposeStructure' AND call_id = ?`
+
+	var rawArgs string
+
+	err := s.db.QueryRowContext(context.Background(), q, callID).Scan(&rawArgs)
+	if err != nil {
+		return "", fmt.Errorf("store: get args for call %s: %w", callID, err)
+	}
+
+	if rawArgs==""{
+		return "", fmt.Errorf("store: trying to get a non-proposal tool for %s", callID)
+	}
+
+	var args struct {
+		ProposedWorkspaceEntries json.RawMessage `json:"proposed_workspace_entries"`
+	}
+
+	err = json.Unmarshal([]byte(rawArgs), &args)
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(args.ProposedWorkspaceEntries), nil
 }
 
 func boolToInt(b bool) int {

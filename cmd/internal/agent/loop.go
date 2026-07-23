@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
+	"github.com/john-beta/hank/cmd/internal/agent/modes"
 	"github.com/john-beta/hank/cmd/internal/llm"
 	"github.com/john-beta/hank/cmd/internal/store"
 )
@@ -14,7 +14,7 @@ const maxIterations = 15
 
 // runLoop drives the bounded ReAct loop. runStep emits its own terminal events
 // before reporting cont=false, so runLoop's only job then is to stop.
-func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) {
+func (a *Agent) runLoop(ctx context.Context, state *State, m modes.Mode, req llm.Request, out chan<- Event) {
 	for i := 0; i < maxIterations; i++ {
 		next, cont := a.runStep(ctx, state, m, req, out)
 		if !cont {
@@ -29,7 +29,7 @@ func (a *Agent) runLoop(ctx context.Context, state *State, m mode.Mode, req llm.
 // runStep runs one model response and either ends the turn or hands an auto
 // call off to handleCall. The Prompt is re-set every Step because OpenAI's
 // PreviousResponseID does not carry it forward.
-func (a *Agent) runStep(ctx context.Context, state *State, m mode.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
+func (a *Agent) runStep(ctx context.Context, state *State, m modes.Mode, req llm.Request, out chan<- Event) (llm.Request, bool) {
 	req.Prompt = m.Prompt
 
 	streamCh, err := a.llm.Stream(ctx, req)
@@ -97,7 +97,7 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 // for the client to resolve a non-auto call or executes and re-feeds an auto
 // one. tool_call is emitted here, not in consume, because auto_re_feed isn't
 // known until the call is matched against the mode's tools.
-func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res streamResult, out chan<- Event) (llm.Request, bool) {
+func (a *Agent) handleCall(ctx context.Context, state *State, m modes.Mode, res streamResult, out chan<- Event) (llm.Request, bool) {
 	call := res.call
 	auto := m.AutoReFeed(call.Name)
 
@@ -130,7 +130,10 @@ func (a *Agent) handleCall(ctx context.Context, state *State, m mode.Mode, res s
 		return llm.Request{}, false // client resolves it; the loop must not spin
 	}
 
-	output, ctxErr := m.Execute(ctx, call.Name, call.Arguments)
+	output, ctxErr := m.Execute(ctx, call.Name, call.Arguments, modes.ExecState{
+		SessionID: state.SessionID,
+		RootDir:   state.RootDir,
+	})
 	if ctxErr != nil {
 		return llm.Request{}, false
 	}

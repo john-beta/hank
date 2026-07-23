@@ -36,7 +36,6 @@ Based on the observations from the exploration, suggest a new structure that imp
 
 # Using your tools
 
-- You MUST only use one tool per response. If you need to use multiple tools, you must do so in separate responses.
 - Presenting a proposal hands control to the user and ends your turn. Do not continue working or assume approval — wait for their response before doing anything else.
 - A workspace structure — new, revised, or requested again — is only ever delivered by submitting it through the proposal tool, never written out as plain text.
 

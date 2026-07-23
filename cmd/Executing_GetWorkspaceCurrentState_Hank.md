@@ -14,7 +14,7 @@ Usage:
 
 - Use Python for the script.
 - The script must perform only the operations necessary to obtain the current state of the workspace and return it as a single JSON value.
-- If the script fails, diagnose the root cause, modify the generated script, and automatically resubmit with the fixed script.
+- If the script fails, diagnose the root cause, modify the generated script, and automatically resubmit with the fixed script. If corrected attempts remain to fail, stop and report the error to the user.
 
 Python Notes:
 
