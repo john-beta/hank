@@ -3,9 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/john-beta/hank/cmd/internal/agent/modes/executing"
-	"github.com/john-beta/hank/cmd/internal/agent/modes/mode"
-	"github.com/john-beta/hank/cmd/internal/agent/modes/planning"
+	"github.com/john-beta/hank/cmd/internal/agent/modes"
 	"github.com/john-beta/hank/cmd/internal/llm"
 	"github.com/john-beta/hank/cmd/internal/store"
 )
@@ -65,17 +63,17 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 		return
 	}
 
-	m.Prompt.Variables = vars;
+	m.Prompt.Variables = vars
 
 	a.runLoop(ctx, state, m, req, out)
 }
 
 // resolveMode: the flip is one-way — there is no Executing -> Planning transition.
-func resolveMode(approvedProposal bool) mode.Mode {
+func resolveMode(approvedProposal bool) modes.Mode {
 	if approvedProposal {
-		return executing.New()
+		return modes.NewExecuting()
 	}
-	return planning.New()
+	return modes.NewPlanning()
 }
 
 // Map variables required per mode.
