@@ -49,14 +49,14 @@ func (a *Agent) prepareMessageRequest(ctx context.Context, state *State, message
 }
 
 func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *ToolResultInput, out chan<- Event) (llm.Request, bool) {
-	pending, err := a.store.PendingCall(ctx, state.SessionID)
+	pending, err := a.store.IsPendingCall(ctx, tr.CallID)
 	if err != nil {
 		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
 		return llm.Request{}, false
 	}
-	if pending == nil || pending.CallID != tr.CallID {
+	if !pending {
 		// Do not forward a desynced call to OpenAI.
-		a.emit(ctx, out, Event{Type: EventError, Error: fmt.Sprintf("agent: tool result call_id %q does not match the pending call", tr.CallID)})
+		a.emit(ctx, out, Event{Type: EventError, Error: fmt.Sprintf("agent: tool result call_id %q does not match a pending call", tr.CallID)})
 		return llm.Request{}, false
 	}
 
@@ -65,9 +65,10 @@ func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *
 		return llm.Request{}, false
 	}
 
-	// CORE: planning -> executing Transition
-	// Clear PrevResponseID so the executing agent starts with a fresh context. Experiments show that preserving it causes biases due to planning-reasoning.
-	// Since PrevResponseID is cut, we cannot send tool results - it is not longer in OpenAI. Instead, send a simple message. 
+	// Planning -> Executing transition. Clear PrevResponseID so Executing starts
+	// fresh; preserving it biases the model toward planning-phase reasoning. With
+	// the previous response dropped, the tool result can't be re-fed to OpenAI, so
+	// send a plain message instead.
 	if approvedFromResult(tr.Result) {
 		state.ApprovedProposal = true
 		state.PrevResponseID = ""
