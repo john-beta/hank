@@ -1,0 +1,17 @@
+{
+  "name": "GetWorkspaceCurrentState",
+  "description": "Executes a given Python script that returns the current state of the workspace.\n\nUsage:\n\n- Use Python for the script.\n- The script must perform only the operations necessary to obtain the current state of the workspace and return it as a single JSON value.\n- If the script fails, diagnose the root cause, modify the generated script, and automatically resubmit with the fixed script. If corrected attempts remain to fail, stop and report the error to the user.\n\nPython Notes:\n\n- Use ONLY the Python standard library — if you try to import a non-standard library, the script will fail indefinitely.\n- Prefer `pathlib` for filesystem operations.\n- Use `os` ONLY if `pathlib` does not provide the required functionality.\n- Treat `.` as the workspace root. Use relative paths scoped to the workspace root whenever possible.\n- Use `json` to return the current state of the workspace as a single JSON value.\n- Write the JSON result to standard output using `print` — only stdout is captured as the current state of the workspace.\n- Return the current state of the workspace as a JSON object containing every workspace entry, each represented by its path.\n\n# Safety Protocol — Read-Only\n\n- Perform only read-only filesystem operations required to obtain the current state of the workspace.\n- NEVER perform mutations on the workspace.\n- NEVER perform operations that do not directly contribute to obtaining the current state of the workspace.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "script": {
+        "type": "string",
+        "description": "The Python script to get the current state of the workspace."
+      }
+    },
+    "required": ["script"],
+    "additionalProperties": false
+  },
+  "output_schema": null
+}

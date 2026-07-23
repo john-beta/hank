@@ -1,0 +1,28 @@
+{
+  "name": "ProposeStructure",
+  "description": "Proposes a new workspace structure based on the exploration results.\n\nUse this tool only after exploration is complete, to propose a new structure — not to describe the current workspace.\n\nUsage:\n\n- Use `proposed_workspace_entries` to structure your proposal.\n- Include one entry for each file in the proposal.\n- Every entry must be a file path; folders exist only as segments within a file's path, never as standalone entries. Do not propose an empty folder — a folder appears in the structure only when it contains at least one file. If the curation criteria would require a folder with no files, do not invent a placeholder file: explain the situation to the user instead.\n- Every proposal must contain the complete `proposed_workspace_entries` array. If the user requests changes, regenerate and resubmit the entire proposal with the requested updates applied.\n- Since proposal approvals are only valid via this tool, if the user approves a proposal outside of it, you MUST regenerate the last proposal and resubmit it via the tool. Include an explanatory text asking to confirm it officially.\n\n# Safety Protocol\n\n- Every entry MUST have an unique path.\n- If the curation criteria would produce duplicates, explain the conflict to the user with alternatives. Do not propose until the duplication conflict is resolved.",
+  "strict": true,
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "proposed_workspace_entries": {
+        "type": "array",
+        "description": "Proposed workspace structure after exploration, organized according to the requested curation criteria.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Relative path to the file from the workspace root. Always include the complete directory hierarchy ending with the file name (e.g. \"folder1/folder2/file.txt\")."
+            }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": ["proposed_workspace_entries"],
+    "additionalProperties": false
+  },
+  "output_schema": null
+}
