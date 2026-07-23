@@ -28,7 +28,8 @@ func NewPlanning() Mode {
 	}
 }
 
-// planningExecute routes Planning's tool names; bodies are stubs until the real logic lands.
+// planningExecute routes Planning's tool names to their handlers. ProposeStructure
+// is client-resolved, so reaching its case here means a desynced call.
 func planningExecute(ctx context.Context, name string, args string, state ExecState) (string, error) {
 	switch name {
 	case "RunExploration":

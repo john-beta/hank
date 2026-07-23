@@ -9,12 +9,12 @@ import (
 	"github.com/john-beta/hank/cmd/internal/store"
 )
 
-// SaveCall inserts a call row with result NULL — the INSERT half of the
-// one-row-per-call_id lifecycle (UpdateCallResult is the UPDATE half).
+// SaveCall inserts a call row with result NULL; UpdateCallResult fills it in
+// when the call resolves. One row per call_id — never a second INSERT.
 func (s *SQLiteStore) SaveCall(ctx context.Context, c store.Call) error {
 	const q = `INSERT INTO call (call_id, turn_id, name, args, result, auto_re_feed)
 	           VALUES (?, ?, ?, ?, NULL, ?)`
-	_, err := s.db.ExecContext(ctx, q, c.CallID, c.TurnID, c.Name, c.Args, boolToInt(c.AutoReFeed))
+	_, err := s.db.ExecContext(ctx, q, c.CallID, c.TurnID, c.Name, c.Args, c.AutoReFeed)
 	if err != nil {
 		return fmt.Errorf("store: save call %s: %w", c.CallID, err)
 	}
@@ -29,64 +29,34 @@ func (s *SQLiteStore) UpdateCallResult(ctx context.Context, callID string, resul
 	return nil
 }
 
-// PendingCall returns the single unresolved, non-auto call on the session's
-// latest assistant turn, or nil, nil if none is outstanding.
-func (s *SQLiteStore) PendingCall(ctx context.Context, sessionID string) (*store.Call, error) {
-	const q = `SELECT call_id, turn_id, name, args, result, auto_re_feed
-	           FROM call
-	           WHERE turn_id = (
-	               SELECT turn_id FROM turn
-	               WHERE session_id = ? AND role = 'assistant'
-	               ORDER BY created_at DESC, rowid DESC
-	               LIMIT 1
-	           )
-	           AND result IS NULL AND auto_re_feed = 0
-	           LIMIT 1`
-	var c store.Call
-	var auto int
-	err := s.db.QueryRowContext(ctx, q, sessionID).Scan(
-		&c.CallID, &c.TurnID, &c.Name, &c.Args, &c.Result, &auto,
-	)
+// IsPendingCall guards tool-result submission against desync: an unknown,
+// already-resolved, or auto call reports false.
+func (s *SQLiteStore) IsPendingCall(ctx context.Context, callID string) (bool, error) {
+	const q = `SELECT 1 FROM call
+	           WHERE call_id = ? AND result IS NULL AND auto_re_feed = 0`
+	var one int
+	err := s.db.QueryRowContext(ctx, q, callID).Scan(&one)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("store: pending call for session %s: %w", sessionID, err)
+		return false, fmt.Errorf("store: is pending call %s: %w", callID, err)
 	}
-	c.AutoReFeed = auto != 0
-	return &c, nil
+	return true, nil
 }
 
-func (s *SQLiteStore) PendingProposeStructureByCallID(callID string) (string, error) {
+func (s *SQLiteStore) PendingProposeStructureByCallID(ctx context.Context, callID string) (string, error) {
 	const q = `SELECT args FROM call WHERE name = 'ProposeStructure' AND call_id = ?`
-
 	var rawArgs string
-
-	err := s.db.QueryRowContext(context.Background(), q, callID).Scan(&rawArgs)
-	if err != nil {
-		return "", fmt.Errorf("store: get args for call %s: %w", callID, err)
-	}
-
-	if rawArgs==""{
-		return "", fmt.Errorf("store: trying to get a non-proposal tool for %s", callID)
+	if err := s.db.QueryRowContext(ctx, q, callID).Scan(&rawArgs); err != nil {
+		return "", fmt.Errorf("store: get proposal args for call %s: %w", callID, err)
 	}
 
 	var args struct {
 		ProposedWorkspaceEntries json.RawMessage `json:"proposed_workspace_entries"`
 	}
-
-	err = json.Unmarshal([]byte(rawArgs), &args)
-
-	if err != nil {
-		return "", err
+	if err := json.Unmarshal([]byte(rawArgs), &args); err != nil {
+		return "", fmt.Errorf("store: unmarshal proposal args for call %s: %w", callID, err)
 	}
-
 	return string(args.ProposedWorkspaceEntries), nil
-}
-
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
