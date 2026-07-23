@@ -64,7 +64,13 @@ const state = computed<'input-available' | 'output-available' | 'output-error'>(
           {{ isError ? 'Error' : 'Result' }}
         </h4>
         <CodeBlock v-if="!isError" :code="outputCode" language="json" />
-        <pre v-else class="tool-part-result">{{ part.result }}</pre>
+        <pre
+          v-else
+          class="tool-part-result rounded-md border border-red-300 px-4 py-3 text-red-800 whitespace-pre-wrap"
+        >
+  {{ result?.error }}
+</pre
+        >
       </div>
     </ToolContent>
   </Tool>

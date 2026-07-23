@@ -65,11 +65,13 @@ func (a *Agent) prepareToolResultRequest(ctx context.Context, state *State, tr *
 		return llm.Request{}, false
 	}
 
-	// An approving result flips ApprovedProposal to true in memory, for the
-	// rest of this request only. Nothing is persisted, so the next request
-	// starts back at Planning unless it too carries an approving result.
+	// CORE: planning -> executing Transition
+	// Clear PrevResponseID so the executing agent starts with a fresh context. Experiments show that preserving it causes biases due to planning-reasoning.
+	// Since PrevResponseID is cut, we cannot send tool results - it is not longer in OpenAI. Instead, send a simple message. 
 	if approvedFromResult(tr.Result) {
 		state.ApprovedProposal = true
+		state.PrevResponseID = ""
+		return a.prepareMessageRequest(ctx, state, "Plan approved.", out)
 	}
 
 	if _, err := a.store.SaveTurn(ctx, store.Turn{
