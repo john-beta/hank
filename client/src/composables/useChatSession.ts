@@ -1,23 +1,20 @@
-import { onMounted, reactive } from 'vue'
-import { useSessionList } from './useSessionList'
-import { useActiveSession } from './useActiveSession'
+import { ref, computed, reactive } from 'vue'
+import type { Ref } from 'vue'
+import type { Session } from '../types'
+import { createSession } from '../services/api'
+
+const activeSession: Ref<Session | null> = ref(null)
+
+const isWizardMode = computed(() => activeSession.value === null)
+
+function startNew(): void {
+  activeSession.value = null
+}
+
+async function create(chosenRootDir: string): Promise<void> {
+  activeSession.value = await createSession(chosenRootDir)
+}
 
 export function useChatSession() {
-  const sessionList = useSessionList()
-  const activeSession = useActiveSession(sessionList.sessions)
-
-  onMounted(() => {
-    sessionList.load()
-  })
-
-  async function createAndSelect(chosenRootDir: string): Promise<void> {
-    const session = await sessionList.create(chosenRootDir)
-    activeSession.select(session.session_id)
-  }
-
-  return {
-    sessionList: reactive(sessionList),
-    activeSession: reactive(activeSession),
-    createAndSelect,
-  }
+  return reactive({ activeSession, isWizardMode, startNew, create })
 }

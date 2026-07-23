@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 )
 
 // CreateSession creates the session directly in the store — no LLM involvement.
@@ -14,6 +15,12 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.RootDir == "" {
 		http.Error(w, "root_dir is required", http.StatusBadRequest)
+		return
+	}
+
+	_, err := os.Stat(req.RootDir)
+	if os.IsNotExist(err) {
+		http.Error(w, "root_dir does not exist", http.StatusNotFound)
 		return
 	}
 

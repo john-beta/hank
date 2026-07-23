@@ -1,25 +1,19 @@
 <script setup lang="ts">
 import { useChatSession } from './composables/useChatSession'
-import Sidebar from './components/Sidebar.vue'
 import MainPanel from './components/MainPanel.vue'
+import { Button } from '@/components/ui/button'
 
-const { sessionList, activeSession, createAndSelect } = useChatSession()
+const chatSession = useChatSession()
 </script>
 
 <template>
   <div class="app">
-    <Sidebar
-      :sessions="sessionList.sessions"
-      :loading="sessionList.loading"
-      :error="sessionList.error"
-      :active-session-id="activeSession.activeSessionId"
-      @new-chat="activeSession.startNew"
-      @select-session="activeSession.select"
-    />
+    <Button variant="outline" size="sm" class="new-chat-btn" @click="chatSession.startNew">
+      New chat
+    </Button>
     <MainPanel
-      :is-wizard-mode="activeSession.isWizardMode"
-      :active-session="activeSession.activeSession"
-      @create-session="createAndSelect"
+      :is-wizard-mode="chatSession.isWizardMode"
+      :active-session="chatSession.activeSession"
     />
   </div>
 </template>
