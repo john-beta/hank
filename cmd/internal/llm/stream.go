@@ -2,10 +2,9 @@ package llm
 
 import "context"
 
-// Stream opens a streaming Responses request and returns a channel of
-// agent-level events. The returned channel is closed when the stream ends,
-// the context is cancelled, or an error occurs. The reader goroutine is bound
-// to ctx so it never outlives its consumer.
+// Stream runs a streaming Responses request as agent-level events. The channel
+// closes when the stream ends, ctx is cancelled, or an error occurs; the reader
+// goroutine is bound to ctx so it never outlives its consumer.
 func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEvent, error) {
 	stream := c.client.Responses.NewStreaming(ctx, buildParams(req))
 	events := make(chan StreamEvent)
@@ -13,15 +12,11 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 	go func() {
 		defer close(events)
 
-		// In-progress function calls, keyed by output item id and assembled
-		// across three stream phases: output_item.added (name + call id) ->
-		// arguments.delta (argument chunks) -> arguments.done (final arguments,
-		// emit). Keying by item id keeps parallel tool calls separate even if
-		// the API interleaves their events.
+		// Function calls assembled across three stream phases, keyed by item id:
+		// output_item.added (name + call id) -> arguments.delta -> arguments.done.
 		pending := make(map[string]*FunctionCallData)
 
 		for stream.Next() {
-			// Bail out promptly if the consumer disconnected.
 			select {
 			case <-ctx.Done():
 				return
@@ -70,8 +65,8 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 	return events, nil
 }
 
-// send delivers an event unless the context is cancelled first, so the reader
-// goroutine can never block forever on an abandoned channel.
+// send delivers an event unless ctx is cancelled first, so the goroutine never
+// blocks on an abandoned channel.
 func (c *OpenAIClient) send(ctx context.Context, ch chan<- StreamEvent, ev StreamEvent) {
 	select {
 	case ch <- ev:

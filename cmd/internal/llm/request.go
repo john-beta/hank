@@ -2,23 +2,32 @@ package llm
 
 import (
 	"github.com/openai/openai-go/v3"
+	"github.com/openai/openai-go/v3/packages/param"
 	"github.com/openai/openai-go/v3/responses"
 )
 
-// buildParams translates an agent-level Request into SDK params. When the
-// Request carries tool results, they become function_call_output input items
-// re-fed against the previous response; otherwise the plain Input string is
-// sent as the turn's input.
+// buildParams maps ToolResults to OpenAI's function_call_output input items
+// re-fed against the previous response; otherwise Input is sent as plain text.
+// The stored Prompt supplies instructions, tools, model, etc.
 func buildParams(req Request) responses.ResponseNewParams {
-	params := responses.ResponseNewParams{
-		Model:        openai.ChatModelGPT4o,
-		Instructions: openai.String(req.Instructions),
-		Tools:        mapTools(req.Tools),
+	prompt := responses.ResponsePromptParam{ID: req.Prompt.ID, Version: param.Opt[string]{Value: req.Prompt.Version}}
+
+
+	if len(req.Prompt.Variables) > 0 {
+		variables := make(map[string]responses.ResponsePromptVariableUnionParam, len(req.Prompt.Variables))
+		for k, v := range req.Prompt.Variables {
+			variables[k] = responses.ResponsePromptVariableUnionParam{
+				OfString: param.Opt[string]{Value: v},
+			}
+		}
+		prompt.Variables = variables
 	}
 
-	if req.Temperature > 0 {
-		params.Temperature = openai.Float(req.Temperature)
+	params := responses.ResponseNewParams{
+		Prompt:            prompt,
+		ParallelToolCalls: openai.Bool(false),
 	}
+
 	if req.PrevResponseID != "" {
 		params.PreviousResponseID = openai.String(req.PrevResponseID)
 	}
@@ -41,22 +50,4 @@ func buildParams(req Request) responses.ResponseNewParams {
 	}
 
 	return params
-}
-
-// mapTools converts agent tool definitions into SDK function tool params.
-func mapTools(defs []ToolDef) []responses.ToolUnionParam {
-	if len(defs) == 0 {
-		return nil
-	}
-	tools := make([]responses.ToolUnionParam, 0, len(defs))
-	for _, d := range defs {
-		tools = append(tools, responses.ToolUnionParam{
-			OfFunction: &responses.FunctionToolParam{
-				Name:        d.Name,
-				Description: openai.String(d.Description),
-				Parameters:  d.Parameters,
-			},
-		})
-	}
-	return tools
 }

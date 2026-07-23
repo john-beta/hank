@@ -5,32 +5,47 @@ import (
 	"time"
 )
 
-// Session is a conversation thread. Phase tracks its current position in the
-// agent's phase progression.
+// Session is a conversation thread bound to a workspace. The mode
+// (Planning/Executing) is not part of it — it's computed per request, never persisted.
 type Session struct {
 	SessionID string
-	Phase     int
+	RootDir   string
 	CreatedAt time.Time
 }
 
-// Turn is a single exchange within a session. A user turn carries Content and a
-// nil ResponseID; an agent turn carries a ResponseID and nil Content (its text
-// is reconstructed from OpenAI via ResponseID later).
+// Turn is a single exchange within a session. OutputText is the user's message
+// or the assistant's streamed text, nil for a tool-result user turn (whose payload
+// lives in call.result). See migrations.go.
 type Turn struct {
 	TurnID     string
 	SessionID  string
+	Role       string  // "user" or "assistant"
+	OutputText *string // nil for tool-result user turns
 	ResponseID *string // nil for user turns
-	Phase      int
-	Role       string  // "user" or "agent"
-	Content    *string // nil for agent turns
 	CreatedAt  time.Time
 }
 
-// Store is the persistence boundary for sessions and turns.
-type Store interface {
-	CreateSession(ctx context.Context) (Session, error)
-	GetSession(ctx context.Context, sessionID string) (Session, error)
+// Call is one tool call: exactly one row per CallID, inserted with Result nil
+// and updated in place when the tool resolves.
+type Call struct {
+	CallID     string
+	TurnID     string
+	Name       string
+	Args       *string
+	Result     *string
+	AutoReFeed bool
+}
 
-	SaveTurn(ctx context.Context, t Turn) error
-	LastAgentTurn(ctx context.Context, sessionID string) (*Turn, error)
+type Store interface {
+	CreateSession(ctx context.Context, rootDir string) (Session, error)
+	GetSession(ctx context.Context, sessionID string) (Session, error)
+	IsSessionImplemented(ctx context.Context, sessionID string) (bool, error)
+
+	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
+	LastAssistantTurn(ctx context.Context, sessionID string) (*Turn, error)
+
+	IsPendingCall(ctx context.Context, callID string) (bool, error)
+	SaveCall(ctx context.Context, c Call) error
+	UpdateCallResult(ctx context.Context, callID string, result string) error
+	PendingProposeStructureByCallID(ctx context.Context, callID string) (string, error)
 }
