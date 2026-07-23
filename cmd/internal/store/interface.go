@@ -39,12 +39,11 @@ type Call struct {
 type Store interface {
 	CreateSession(ctx context.Context, rootDir string) (Session, error)
 	GetSession(ctx context.Context, sessionID string) (Session, error)
+	IsSessionImplemented(ctx context.Context, sessionID string) (bool, error)
 
 	SaveTurn(ctx context.Context, t Turn) (turnID string, err error)
 	LastAssistantTurn(ctx context.Context, sessionID string) (*Turn, error)
 
-	// IsPendingCall reports whether callID names an unresolved, non-auto call —
-	// one still awaiting a client-supplied result.
 	IsPendingCall(ctx context.Context, callID string) (bool, error)
 	SaveCall(ctx context.Context, c Call) error
 	UpdateCallResult(ctx context.Context, callID string, result string) error

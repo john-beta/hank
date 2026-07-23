@@ -41,6 +41,18 @@ func (a *Agent) run(ctx context.Context, sessionID string, input TurnInput, out 
 		return
 	}
 
+	implemented, err := a.store.IsSessionImplemented(ctx, sessionID)
+
+	if err != nil {
+		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})
+		return
+	}
+
+	if implemented {
+		a.emit(ctx, out, Event{Type: EventError, Error: "This session has finished."})
+		return
+	}
+
 	lastAssistantTurn, err := a.store.LastAssistantTurn(ctx, sessionID)
 	if err != nil {
 		a.emit(ctx, out, Event{Type: EventError, Error: err.Error()})

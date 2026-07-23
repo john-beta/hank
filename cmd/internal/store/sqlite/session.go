@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -29,4 +30,24 @@ func (s *SQLiteStore) GetSession(ctx context.Context, sessionID string) (store.S
 		return store.Session{}, fmt.Errorf("store: get session %s: %w", sessionID, err)
 	}
 	return sess, nil
+}
+
+func (s *SQLiteStore) IsSessionImplemented(ctx context.Context, sessionID string) (bool, error){
+	const q=`SELECT 1 FROM turn 
+		INNER JOIN call ON turn.turn_id = call.turn_id 
+		WHERE turn.role = "assistant" AND call.name = "RunImplementation" AND turn.session_id = ?`;
+
+	var one int
+
+	err := s.db.QueryRowContext(ctx, q, sessionID).Scan(&one)
+
+	if err == sql.ErrNoRows{
+		return false, nil
+	}
+
+	if err != nil {
+		return false, fmt.Errorf("store: is session implemented %s: %w", sessionID, err)
+	}
+
+	return true, nil;
 }
