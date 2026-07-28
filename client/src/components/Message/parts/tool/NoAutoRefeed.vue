@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ToolPart } from '../../../../types'
 import type { VNode } from 'vue'
+import { ArrowRightIcon } from '@lucide/vue'
 import { computed, h } from 'vue'
 import { FileTree, FileTreeFile, FileTreeFolder } from '../../../ai-elements/file-tree'
 import HITL from './HITL.vue'
@@ -22,14 +23,19 @@ interface FolderNode {
 }
 type TreeNode = FileNode | FolderNode
 
-// Args are always { "proposed_workspace_entries": [{ "path": "..." }] }.
-const paths = computed<string[]>(() => {
+interface WorkspaceEntry {
+  current_path: string
+  proposed_path: string
+}
+
+// Args are always { "proposed_workspace_entries": [{ "current_path": "...", "proposed_path": "..." }] }.
+const entries = computed<WorkspaceEntry[]>(() => {
   if (!props.part.args) return []
   try {
     const parsed = JSON.parse(props.part.args) as {
-      proposed_workspace_entries?: { path: string }[]
+      proposed_workspace_entries?: WorkspaceEntry[]
     }
-    return (parsed.proposed_workspace_entries ?? []).map((e) => e.path)
+    return parsed.proposed_workspace_entries ?? []
   } catch {
     return []
   }
@@ -37,9 +43,9 @@ const paths = computed<string[]>(() => {
 
 // Build a nested folder/file tree from the flat paths, de-duplicating shared
 // folder prefixes (e.g. two entries under "cmd/" share one folder node).
-const tree = computed<TreeNode[]>(() => {
+function buildTree(paths: string[]): TreeNode[] {
   const root: FolderNode = { type: 'folder', name: '', path: '', children: [] }
-  for (const fullPath of paths.value) {
+  for (const fullPath of paths) {
     const segments = fullPath.split('/').filter(Boolean)
     let cursor = root
     segments.forEach((segment, i) => {
@@ -59,22 +65,27 @@ const tree = computed<TreeNode[]>(() => {
     })
   }
   return root.children
-})
+}
 
 // Expand every folder by default so proposed entries are visible immediately.
-const allFolderPaths = computed(() => {
+function collectFolderPaths(nodes: TreeNode[]): Set<string> {
   const set = new Set<string>()
-  const walk = (nodes: TreeNode[]) => {
-    for (const node of nodes) {
+  const walk = (items: TreeNode[]) => {
+    for (const node of items) {
       if (node.type === 'folder') {
         set.add(node.path)
         walk(node.children)
       }
     }
   }
-  walk(tree.value)
+  walk(nodes)
   return set
-})
+}
+
+const leftTree = computed(() => buildTree(entries.value.map((e) => e.current_path)))
+const rightTree = computed(() => buildTree(entries.value.map((e) => e.proposed_path)))
+const leftExpanded = computed(() => collectFolderPaths(leftTree.value))
+const rightExpanded = computed(() => collectFolderPaths(rightTree.value))
 
 function FileTreeNode(nodeProps: { node: TreeNode }): VNode {
   if (nodeProps.node.type === 'file') {
@@ -90,9 +101,15 @@ function FileTreeNode(nodeProps: { node: TreeNode }): VNode {
 
 <template>
   <div class="tool-part">
-    <FileTree v-if="tree.length" :default-expanded="allFolderPaths">
-      <FileTreeNode v-for="node in tree" :key="node.path" :node="node" />
-    </FileTree>
+    <div v-if="entries.length" class="flex items-center gap-3">
+      <FileTree :default-expanded="leftExpanded" class="flex-1">
+        <FileTreeNode v-for="node in leftTree" :key="node.path" :node="node" />
+      </FileTree>
+      <ArrowRightIcon class="size-4 shrink-0 text-muted-foreground" />
+      <FileTree :default-expanded="rightExpanded" class="flex-1">
+        <FileTreeNode v-for="node in rightTree" :key="node.path" :node="node" />
+      </FileTree>
+    </div>
     <HITL :part="part" />
   </div>
 </template>
