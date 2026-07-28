@@ -101,6 +101,6 @@ func resolveModeVariables(ctx context.Context, approvedProposal bool, turn TurnI
 	}
 
 	return map[string]string{
-		"plan_structure": p,
+		"proposed_structure": p,
 	}, nil
 }

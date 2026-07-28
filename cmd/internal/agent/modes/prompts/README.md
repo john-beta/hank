@@ -11,7 +11,7 @@ Do this once per folder (`planning/` and `executing/`):
 1. Open the [OpenAI Playground](https://platform.openai.com/chat/edit).
 2. Paste the `.md` content into the system instructions.
 3. For each `.json` file, add a tool under **Local tools > Add Function**.
-4. **`executing/` only:** under **Variables > Add**, add a variable named exactly `plan_structure`.
+4. **`executing/` only:** under **Variables > Add**, add a variable named exactly `proposed_structure`.
 5. Save the prompt and copy its `prompt_id` and `version`.
 
 ## Wire them up

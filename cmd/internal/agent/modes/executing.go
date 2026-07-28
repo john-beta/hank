@@ -8,13 +8,13 @@ import (
 
 const (
 	executingPromptID      = "pmpt_6a5d1005286c81978fc2110e4abe55ff0184ca20821201e2"
-	executingPromptVersion = "6"
+	executingPromptVersion = "7"
 )
 
 // RunImplementation's presence here and absence from Planning is the mode boundary.
 var executingAutoReFeed = map[string]bool{
-	"GetWorkspaceCurrentState": true,
-	"RunImplementation":        true,
+	"GetWorkspaceState": true,
+	"RunImplementation": true,
 }
 
 func NewExecuting() Mode {
@@ -28,7 +28,7 @@ func NewExecuting() Mode {
 // executingExecute routes Executing's tool names to their handlers.
 func executingExecute(ctx context.Context, name string, args string, state ExecState) (string, error) {
 	switch name {
-	case "GetWorkspaceCurrentState":
+	case "GetWorkspaceState":
 		return RunPythonProcess(ctx, args, state.RootDir)
 	case "RunImplementation":
 		return RunPythonProcess(ctx, args, state.RootDir)

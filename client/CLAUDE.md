@@ -65,7 +65,7 @@ The server streams a flat sequence of events (`text_delta`, `tool_call`, `tool_r
 
 `MessageRenderer` → `PartRenderer` maps `part.type` to a component via `COMPONENT_BY_TYPE`. **To add a renderable part type:** (1) add the variant to the `Part` union in `types.ts`, (2) create the component in `Message/parts/`, (3) register it in `PartRenderer`'s map. `ToolPart` then sub-routes on `part.autoReFeed`:
 - `true` → `tool/AutoRefeed.vue` — a server-executed tool; renders the `script` arg as a Python `CodeBlock` and the result (`{success, output|error}`) as JSON, or the error text in a raw `<pre>`.
-- `false` → `tool/NoAutoRefeed.vue` — the `ProposeStructure` plan; builds a nested `FileTree` from the flat `proposed_workspace_entries` paths, and embeds the `HITL` approval control.
+- `false` → `tool/NoAutoRefeed.vue` — the `ProposeStructure` plan; renders two nested `FileTree`s side by side (current paths → proposed paths) from `proposed_workspace_entries`, and embeds the `HITL` approval control.
 
 ### Human-in-the-loop approval (the gate)
 
@@ -82,4 +82,4 @@ Both paths funnel through `useMessageStream.run(sessionId, echo, input)` — a p
 
 - Import our own code by relative path; import vendored libraries and `@/lib/utils` via the `@/` alias (see `vite.config.ts` / `components.json` aliases).
 - `ChatBody` auto-scrolls only when the user is already near the bottom (`SCROLL_BOTTOM_OFFSET`), so reading back isn't interrupted; it resets the stream on `sessionId` change.
-- Tool wire shapes are stable and relied upon: auto-re-feed args are `{ "script": "<python>" }`; results are `{ success, output }` or `{ success, error }`; `ProposeStructure` args are `{ "proposed_workspace_entries": [{ "path" }] }`.
+- Tool wire shapes are stable and relied upon: auto-re-feed args are `{ "script": "<python>" }`; results are `{ success, output }` or `{ success, error }`; `ProposeStructure` args are `{ "proposed_workspace_entries": [{ "current_path", "proposed_path" }] }`.
