@@ -20,16 +20,28 @@ _Two modes:_
 
 ### Run
 
-Server:
-
-```sh
-cd cmd\server && go run .
-```
-
-Client:
+**Client:**
 
 ```sh
 cd client && npm run dev
+```
+
+**Server:**
+
+Venv (Require Python 3.11+):
+
+```sh
+cd internal\agent\modes\child_process
+py -m venv venv
+venv\Scripts\python.exe -m pip install --upgrade pip
+venv\Scripts\python.exe -m pip install -r requirements.txt
+cd ..\..\..\..
+```
+
+Run:
+
+```sh
+go run ./server
 ```
 
 Requires the `OPENAI_API_KEY` environment variable. The account behind that key must also host the agent's prompts — replicate them following [prompts/README.md](cmd/internal/agent/modes/prompts/README.md).

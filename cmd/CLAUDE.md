@@ -74,9 +74,9 @@ Every tool call is classified `AutoReFeed` true/false per the active mode's poli
 
 `AutoReFeed` is emitted as `*bool` so a meaningful `false` survives JSON (a plain `false` would be dropped by `omitempty`), telling the client it must resolve the call.
 
-### Tool execution (`modes/child_process.go`, `modes/job_object.go`)
+### Tool execution (`modes/child_process/child_process.go`, `modes/child_process/job_object.go`)
 
-All four tools ultimately run a Python script (passed as the `script` arg) via `py -I -` (isolated mode, script on stdin) with `cmd.Dir` set to the session's `RootDir`. The child runs inside a Windows **Job Object** (`runInJobObject`) that enforces: kill-on-close, an active-process limit of 2, and a 256 MiB memory cap, with a 15s `WaitDelay`. The environment is stripped to just `SystemRoot`. Results are returned as a JSON `PythonResult` (`success`/`output`/`error`) — a failing tool returns a JSON error string, not a Go error, so the model can react to it.
+The tools with `AutoReFeed = true` run a Python script (passed as the `script` arg) via a **venv-scoped** `python.exe -I -` (isolated mode, script on stdin), resolved relative to `child_process.go` (`./venv/Scripts/python.exe`) so third-party libs (`pypdf`, `python-docx`) are importable while `-I` still strips cwd/user-site/`PYTHON*` env vars (requires Python 3.11+ for `-I` to imply `-P`). The venv is gitignored and rebuilt via `requirements.txt`. `cmd.Dir` is set to the session's `RootDir`. The child runs inside a Windows **Job Object** (`runInJobObject`) that enforces: kill-on-close, an active-process limit of 2, and a 256 MiB memory cap, with a 15s `WaitDelay`. The environment is stripped to just `SystemRoot`. Results are returned as a JSON `PythonResult` (`success`/`output`/`error`) — a failing tool returns a JSON error string, not a Go error, so the model can react to it.
 
 ### Persistence model (`store/sqlite/migrations.go`)
 
@@ -95,6 +95,6 @@ Note: `LastAssistantTurn` orders by `created_at DESC, rowid DESC` because timest
 
 ## Conventions
 
-- **OpenAI Responses API, not Chat Completions.** Prompts (system instructions, tool schemas, model, reasoning settings) are **stored server-side in the OpenAI dashboard** and referenced only by `ID` + `Version` constants in the `modes` package. The `.md` files at the root of `cmd/` are human-readable references for those dashboard prompts/tools; changing tool behavior often means editing the dashboard prompt, not just Go code.
+- **OpenAI Responses API, not Chat Completions.** Prompts (system instructions, tool schemas, model, reasoning settings) are **stored server-side in the OpenAI dashboard** and referenced only by `ID` + `Version` constants in the `modes` package. `internal/agent/modes/prompts/` (see its `README.md`) holds the source for those dashboard prompts/tools, split into `planning/` and `executing/`; changing tool behavior often means editing the prompt there and replicating it into the OpenAI dashboard, not just Go code.
 - Errors surface to the client as an `error` event on the stream, not an HTTP status (once streaming has begun).
 - Both the LLM stream goroutine and the agent goroutine send on channels via a `select { case ch <- ev: case <-ctx.Done(): }` guard so they never block on an abandoned consumer.
