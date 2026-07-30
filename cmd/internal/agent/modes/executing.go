@@ -9,7 +9,7 @@ import (
 
 const (
 	executingPromptID      = "pmpt_6a5d1005286c81978fc2110e4abe55ff0184ca20821201e2"
-	executingPromptVersion = "7"
+	executingPromptVersion = "8"
 )
 
 // RunImplementation's presence here and absence from Planning is the mode boundary.
