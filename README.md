@@ -20,10 +20,14 @@ _Two modes:_
 
 ### Run
 
+> **Note**: Start always from the root directory.
+
 **Client:**
 
 ```sh
-cd client && npm run dev
+cd client
+npm install
+npm run dev
 ```
 
 **Server:**
@@ -31,11 +35,10 @@ cd client && npm run dev
 Venv (Require Python 3.11+):
 
 ```sh
-cd internal\agent\modes\child_process
+cd cmd
 py -m venv venv
-venv\Scripts\python.exe -m pip install --upgrade pip
-venv\Scripts\python.exe -m pip install -r requirements.txt
-cd ..\..\..\..
+venv/Scripts/python.exe -m pip install --upgrade pip
+venv/Scripts/python.exe -m pip install -r requirements.txt
 ```
 
 Run:
