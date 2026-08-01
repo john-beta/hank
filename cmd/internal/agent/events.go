@@ -5,11 +5,14 @@ import "context"
 type EventType string
 
 const (
-	EventTextDelta  EventType = "text_delta"
-	EventToolCall   EventType = "tool_call"
-	EventToolResult EventType = "tool_result"
-	EventDone       EventType = "done"
-	EventError      EventType = "error"
+	EventTextDelta          EventType = "text_delta"
+	EventToolCall           EventType = "tool_call"
+	EventToolResult         EventType = "tool_result"
+	EventReasoningStart     EventType = "reasoning_start"
+	EventReasoningTextDelta EventType = "reasoning_delta"
+	EventReasoningDone      EventType = "reasoning_done"
+	EventDone               EventType = "done"
+	EventError              EventType = "error"
 )
 
 // Event is emitted over the streaming response. AutoReFeed is *bool so a

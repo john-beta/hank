@@ -26,7 +26,7 @@ type ToolResult struct {
 }
 
 type StreamEvent struct {
-	Type         string // "text_delta" | "function_call" | "done" | "error"
+	Type         string // "text_delta" | "function_call" | "reasoning_start" | "reasoning_done" | "reasoning_delta" | "reasoning_done" | "done" | "error"
 	Text         string
 	FunctionCall *FunctionCallData
 	ResponseID   string
