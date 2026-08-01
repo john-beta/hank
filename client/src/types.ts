@@ -4,7 +4,15 @@ export interface Session {
   created_at: string
 }
 
-export type EventType = 'text_delta' | 'tool_call' | 'tool_result' | 'done' | 'error'
+export type EventType =
+  | 'text_delta'
+  | 'tool_call'
+  | 'tool_result'
+  | 'reasoning_start'
+  | 'reasoning_delta'
+  | 'reasoning_done'
+  | 'done'
+  | 'error'
 
 export type RoleType = 'user' | 'assistant'
 
@@ -49,12 +57,18 @@ export interface ToolPart {
   state: 'call' | 'result'
 }
 
+export interface ReasoningPart {
+  type: 'reasoning'
+  isReasoning: boolean
+  text: string
+}
+
 export interface ErrorPart {
   type: 'error'
   error: string
 }
 
-export type Part = TextPart | ToolPart | ErrorPart
+export type Part = TextPart | ToolPart | ReasoningPart | ErrorPart
 
 export interface ChatMessage {
   role: RoleType

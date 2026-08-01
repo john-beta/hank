@@ -83,6 +83,12 @@ func (a *Agent) consume(ctx context.Context, out chan<- Event, streamCh <-chan l
 				if ev.FunctionCall != nil {
 					res.call = ev.FunctionCall
 				}
+			case "reasoning_start":
+				a.emit(ctx, out, Event{Type: EventReasoningStart})
+			case "reasoning_delta":
+				a.emit(ctx, out, Event{Type: EventReasoningTextDelta, Text: ev.Text})
+			case "reasoning_done":
+				a.emit(ctx, out, Event{Type: EventReasoningDone})
 			case "done":
 				res.responseID = ev.ResponseID
 			case "error":

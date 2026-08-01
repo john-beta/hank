@@ -1,4 +1,4 @@
-package modes
+package child_process
 
 import (
 	"fmt"

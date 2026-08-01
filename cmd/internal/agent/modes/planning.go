@@ -3,13 +3,14 @@ package modes
 import (
 	"context"
 
+	"github.com/john-beta/hank/cmd/internal/agent/modes/child_process"
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
 // Prompt config lives in the OpenAI dashboard; Go only references it by id + version.
 const (
 	planningPromptID      = "pmpt_6a5a753b523881939f22b420fc63fee6074a8fbf8db7fc2d"
-	planningPromptVersion = "7"
+	planningPromptVersion = "8"
 )
 
 // ProposeStructure is not auto-re-fed: the client resolves it, and an approving
@@ -33,7 +34,7 @@ func NewPlanning() Mode {
 func planningExecute(ctx context.Context, name string, args string, state ExecState) (string, error) {
 	switch name {
 	case "RunExploration":
-		return RunPythonProcess(ctx, args, state.RootDir)
+		return child_process.RunPythonProcess(ctx, args, state.RootDir)
 	case "ProposeStructure":
 		return unreachableToolErrorToJSON(&unreachableToolError{Success: false, Error: "Propose structure could not be approved"}), nil
 	default:

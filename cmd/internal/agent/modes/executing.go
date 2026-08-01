@@ -3,12 +3,13 @@ package modes
 import (
 	"context"
 
+	"github.com/john-beta/hank/cmd/internal/agent/modes/child_process"
 	"github.com/john-beta/hank/cmd/internal/llm"
 )
 
 const (
 	executingPromptID      = "pmpt_6a5d1005286c81978fc2110e4abe55ff0184ca20821201e2"
-	executingPromptVersion = "7"
+	executingPromptVersion = "8"
 )
 
 // RunImplementation's presence here and absence from Planning is the mode boundary.
@@ -29,9 +30,9 @@ func NewExecuting() Mode {
 func executingExecute(ctx context.Context, name string, args string, state ExecState) (string, error) {
 	switch name {
 	case "GetWorkspaceState":
-		return RunPythonProcess(ctx, args, state.RootDir)
+		return child_process.RunPythonProcess(ctx, args, state.RootDir)
 	case "RunImplementation":
-		return RunPythonProcess(ctx, args, state.RootDir)
+		return child_process.RunPythonProcess(ctx, args, state.RootDir)
 	default:
 		return unreachableToolErrorToJSON(&unreachableToolError{Success: false, Error: "Tool result not found for this call"}), nil
 	}

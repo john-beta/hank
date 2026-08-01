@@ -1,4 +1,4 @@
-package modes
+package child_process
 
 import (
 	"bytes"
@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -23,7 +24,10 @@ func RunPythonProcess(ctx context.Context, args string, rootDir string) (string,
 		return pythonResultToJSON(&PythonResult{Success: false, Error: err.Error()}), nil
 	}
 
-	cmd := exec.CommandContext(ctx, "py", "-I", "-")
+	cwd, _ := os.Getwd()
+	pyExec := filepath.Join(cwd, "venv", "Scripts", "python.exe")
+
+	cmd := exec.CommandContext(ctx, pyExec, "-I", "-")
 	cmd.Dir = rootDir
 	cmd.Stdin = strings.NewReader(script)
 

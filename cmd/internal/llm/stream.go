@@ -31,9 +31,24 @@ func (c *OpenAIClient) Stream(ctx context.Context, req Request) (<-chan StreamEv
 
 			case "response.output_item.added":
 				item := event.AsResponseOutputItemAdded().Item
-				if item.Type == "function_call" {
+
+				switch item.Type {
+
+				case "function_call":
 					pending[item.ID] = &FunctionCallData{Name: item.Name, CallID: item.CallID}
+
+				case "reasoning":
+					c.send(ctx, events, StreamEvent{Type: "reasoning_start"})
 				}
+
+			case "response.output_item.done":
+				if event.AsResponseOutputItemDone().Item.Type == "reasoning" {
+					c.send(ctx, events, StreamEvent{Type: "reasoning_done"})
+				}
+
+			case "response.reasoning_summary_text.delta":
+				delta := event.AsResponseReasoningSummaryTextDelta()
+				c.send(ctx, events, StreamEvent{Type: "reasoning_delta", Text: delta.Delta})
 
 			case "response.function_call_arguments.delta":
 				d := event.AsResponseFunctionCallArgumentsDelta()
