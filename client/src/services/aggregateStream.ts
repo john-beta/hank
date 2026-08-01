@@ -1,9 +1,5 @@
 import type { ChatMessage, StreamEvent, ToolPart } from '../types'
 
-// Adaptation layer: folds the flat NDJSON event stream into the turn-centric
-// UI model. A single assistant response is a sequence of events; here it becomes
-// one assistant ChatMessage with ordered parts (text, tool, text, ...).
-
 function currentAssistant(messages: ChatMessage[]): ChatMessage {
   const last = messages.at(-1)
   if (last?.role === 'assistant') return last
@@ -34,13 +30,29 @@ export function applyEvent(messages: ChatMessage[], event: StreamEvent): void {
       break
     case 'tool_result': {
       const parts = currentAssistant(messages).parts
-      const part = parts.find(
-        (p) => p.type === 'tool' && p.callId === event.call_id,
-      ) as ToolPart | undefined
+      const part = parts.find((p) => p.type === 'tool' && p.callId === event.call_id) as
+        | ToolPart
+        | undefined
       if (part) {
         part.result = event.tool_result
         part.state = 'result'
       }
+      break
+    }
+    // Reasoning arrives as start → delta* → done, one block per reasoning item.
+    // The part is created by the first delta, so items with no summary text render
+    // nothing; `isReasoning` doubles as the "block is still open" marker.
+    case 'reasoning_delta': {
+      const msg = currentAssistant(messages)
+      const last = msg.parts.at(-1)
+      if (last?.type === 'reasoning' && last.isReasoning) last.text += event.text ?? ''
+      else msg.parts.push({ type: 'reasoning', isReasoning: true, text: event.text ?? '' })
+      break
+    }
+    case 'reasoning_start':
+    case 'reasoning_done': {
+      const last = currentAssistant(messages).parts.at(-1)
+      if (last?.type === 'reasoning') last.isReasoning = false
       break
     }
     case 'error':
